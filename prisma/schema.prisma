@@ -6,19 +6,17 @@ datasource db {
   provider = "postgresql"
 }
 
-// ... your models (User, Account, Transaction) stay exactly the same
-
-// --- DATABASE TABLES ---
+// --- ENTERPRISE DATABASE TABLES ---
 
 model User {
-  id             String    @id @default(cuid())
-  firstName      String
-  lastName       String
-  creditScore    Int
-  snapshotAmount Float
+  id          String    @id @default(cuid())
+  username    String    @unique // NEW: Unique login ID
+  password    String    // NEW: Will store the hashed password
+  firstName   String
+  lastName    String
+  creditScore Int
   
-  // A user can have multiple accounts
-  accounts       Account[] 
+  accounts    Account[] 
 }
 
 model Account {
@@ -26,17 +24,18 @@ model Account {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  accountKey  String   // e.g., "checking", "freedomUnlimited" (Helps our UI map easily)
+  accountKey  String   
   name        String
   mask        String
-  routing     String?  // Optional: Credit cards don't have routing numbers
-  accountNum  String?  // Optional: Credit cards don't use this the same way
+  type        String   // "DEPOSITORY" (Checking/Savings) or "CREDIT" (Cards/Loans)
   
-  balance     Float
-  creditLimit Float?   // Optional: Bank accounts don't have this
-  paymentDue  Float?   // Optional: Bank accounts don't have this
+  // Depository-specific fields
+  routing     String?  
+  accountNum  String?  
   
-  // An account can have multiple transactions
+  // Credit-specific fields
+  creditLimit Float?   
+  
   transactions Transaction[]
 }
 
@@ -45,10 +44,10 @@ model Transaction {
   accountId   String
   account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   
-  date        String   // Storing as String (e.g., "Today", "Yesterday") to match your exact UI prototype
+  date        DateTime // Strict Database Timestamp
   desc        String
   cat         String
-  amount      Float
+  amount      Float    // Credits = positive, Debits = negative
   
-  createdAt   DateTime @default(now()) // Real database timestamp for sorting
+  createdAt   DateTime @default(now()) 
 }

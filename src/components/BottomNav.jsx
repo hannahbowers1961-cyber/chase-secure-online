@@ -10,6 +10,10 @@ export default function BottomNav() {
   // Hide on the pre-login lock screen
   if (pathname === "/") return null;
 
+  if (pathname === "/") {
+    return null;
+  }
+
   const navItems = [
     { name: "Accounts", href: "/dashboard", id: "accounts" },
     { name: "Pay & transfer", href: "/transfers", id: "pay" },

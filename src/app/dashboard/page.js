@@ -30,6 +30,9 @@ export default function Dashboard() {
     setCurrentDate(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
   }, []);
 
+  // ENTERPRISE FIX: Guard clause. If the database hasn't loaded yet, stay hidden.
+  if (!db) return null;
+
   return (
     <div className="w-full h-full bg-[#f4f5f9] overflow-y-auto pb-24 font-sans relative">
       
@@ -70,7 +73,7 @@ export default function Dashboard() {
                 <span className="bg-gray-100 text-gray-600 text-[11px] px-2 py-0.5 rounded font-medium">30 sec read</span>
               </div>
               {/* Splitting to remove the decimal .00 to match your exact screenshot style */}
-              <p className="text-sm text-gray-600 mt-0.5">Your money in this month is <span className="font-semibold text-gray-900">{formatMoney(db.user.snapshotAmount).split('.')[0]}.</span></p>
+              <p className="text-sm text-gray-600 mt-0.5">Your money in this month is <span className="font-semibold text-gray-900">{formatMoney(db.user?.snapshotAmount || 0).split('.')[0]}.</span></p>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -91,11 +94,11 @@ export default function Dashboard() {
           <div className="divide-y divide-gray-200">
             <Link href="/dashboard/checking" className="block p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-center text-[15px] text-gray-800 mb-1">
-                {db.accounts.checking.name} (...{db.accounts.checking.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                {db.accounts.checking?.name} (...{db.accounts.checking?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
               </div>
               <div className="text-right">
                 <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                  {formatMoney(db.accounts.checking.balance)}
+                  {formatMoney(db.accounts.checking?.balance || 0)}
                 </div>
                 <div className="text-[13px] text-gray-500 font-medium">Available balance</div>
               </div>
@@ -103,11 +106,11 @@ export default function Dashboard() {
 
             <Link href="/dashboard/savings" className="block p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-center text-[15px] text-gray-800 mb-1">
-                {db.accounts.savings.name} (...{db.accounts.savings.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                {db.accounts.savings?.name} (...{db.accounts.savings?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
               </div>
               <div className="text-right">
                 <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                  {formatMoney(db.accounts.savings.balance)}
+                  {formatMoney(db.accounts.savings?.balance || 0)}
                 </div>
                 <div className="text-[13px] text-gray-500 font-medium">Available balance</div>
               </div>
@@ -129,7 +132,7 @@ export default function Dashboard() {
           <div className="divide-y divide-gray-200">
             <Link href="/dashboard/freedom" className="block p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-center text-[15px] text-gray-800 mb-4">
-                {db.accounts.freedom.name} (...{db.accounts.freedom.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                {db.accounts.freedom?.name} (...{db.accounts.freedom?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
               </div>
               <div className="flex justify-between items-start mb-3">
                 <div className="w-20 h-[52px] rounded-md bg-gradient-to-br from-[#1F618D] via-[#2980B9] to-[#85C1E9] p-1.5 relative overflow-hidden shadow-sm border border-blue-800/20">
@@ -141,7 +144,8 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                    {formatMoney(db.accounts.freedom.balance)}
+                    {/* Math.abs() converts the negative database liability into a positive display number */}
+                    {formatMoney(Math.abs(db.accounts.freedom?.balance || 0))}
                   </div>
                   <div className="text-[13px] text-gray-500 font-medium">Current balance</div>
                 </div>
@@ -154,7 +158,7 @@ export default function Dashboard() {
 
             <Link href="/dashboard/credit-card" className="block p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-center text-[15px] text-gray-800 mb-4">
-                {db.accounts.freedomUnlimited.name} (...{db.accounts.freedomUnlimited.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                {db.accounts.freedomUnlimited?.name} (...{db.accounts.freedomUnlimited?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
               </div>
               <div className="flex justify-between items-start">
                 <div className="w-20 h-[52px] rounded-md bg-gradient-to-br from-[#1A5276] via-[#2471A3] to-[#5DADE2] p-1.5 relative overflow-hidden shadow-sm border border-blue-800/20">
@@ -169,7 +173,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                    {formatMoney(db.accounts.freedomUnlimited.balance)}
+                    {formatMoney(Math.abs(db.accounts.freedomUnlimited?.balance || 0))}
                   </div>
                   <div className="text-[13px] text-gray-500 font-medium">Current balance</div>
                 </div>
@@ -187,7 +191,7 @@ export default function Dashboard() {
             <Link href="/dashboard/loans" className="block p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center text-[15px] text-gray-800">
-                  {db.accounts.autoLoan.name} (...{db.accounts.autoLoan.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                  {db.accounts.autoLoan?.name} (...{db.accounts.autoLoan?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
                 </div>
               </div>
               <div className="flex justify-between items-start">
@@ -196,7 +200,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                    {formatMoney(db.accounts.autoLoan.balance)}
+                    {formatMoney(Math.abs(db.accounts.autoLoan?.balance || 0))}
                   </div>
                   <div className="text-[13px] text-gray-500 font-medium">Remaining balance</div>
                 </div>
@@ -215,7 +219,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-[15px]">Credit Journey</h3>
-                  <p className="text-xs text-gray-600 mt-0.5">Your score is <span className="font-bold text-[#1e8b4e]">{db.user.creditScore}</span></p>
+                  <p className="text-xs text-gray-600 mt-0.5">Your score is <span className="font-bold text-[#1e8b4e]">{db.user?.creditScore}</span></p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400" />
