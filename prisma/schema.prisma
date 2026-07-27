@@ -10,8 +10,8 @@ datasource db {
 
 model User {
   id          String    @id @default(cuid())
-  username    String    @unique // NEW: Unique login ID
-  password    String    // NEW: Will store the hashed password
+  username    String    @unique
+  password    String
   firstName   String
   lastName    String
   creditScore Int
@@ -20,14 +20,16 @@ model User {
 }
 
 model Account {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  accountKey  String   
+  accountKey  String    
   name        String
   mask        String
-  type        String   // "DEPOSITORY" (Checking/Savings) or "CREDIT" (Cards/Loans)
+  type        String    // "DEPOSITORY" or "CREDIT"
+  
+  balance     Float     @default(0) // NEW: Added balance field
   
   // Depository-specific fields
   routing     String?  
@@ -40,14 +42,14 @@ model Account {
 }
 
 model Transaction {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   accountId   String
-  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   
-  date        DateTime // Strict Database Timestamp
+  date        DateTime 
   desc        String
   cat         String
-  amount      Float    // Credits = positive, Debits = negative
+  amount      Float    
   
   createdAt   DateTime @default(now()) 
 }

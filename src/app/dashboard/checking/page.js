@@ -3,34 +3,97 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBank } from "@/context/BankContext";
-import { ArrowLeft, Eye, EyeOff, Search, Camera, ArrowRightLeft, Download, Building2, X, FileText, DownloadCloud } from "lucide-react";
+import { 
+  ArrowLeft, Eye, EyeOff, Search, Camera, ArrowRightLeft, 
+  Download, Building2, X, FileText, DownloadCloud, CheckCircle2, 
+  ChevronDown, ChevronUp, Loader2 
+} from "lucide-react";
 
 export default function CheckingAccount() {
   const router = useRouter();
   
-  // Notice we pull executeTransfer out of the database here
   const { db, formatMoney, executeTransfer } = useBank();
   
+  // Base UI State
   const [showNumbers, setShowNumbers] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedTx, setExpandedTx] = useState(null);
   
-  // State for the interactive transfer amount
+  // Modal Specific State
   const [transferAmount, setTransferAmount] = useState("");
+  const [actionSuccess, setActionSuccess] = useState(false);
+  const [frontCaptured, setFrontCaptured] = useState(false);
+  const [backCaptured, setBackCaptured] = useState(false);
+  const [downloading, setDownloading] = useState(null);
 
-  const account = db.accounts.checking;
-  const targetAccount = db.accounts.savings; // Automatically point to Savings
+  const account = db?.accounts?.checking || { name: "Checking", balance: 0, mask: "0000", routing: "000000000", accountNum: "000000000000", transactions: [] };
+  const targetAccount = db?.accounts?.savings || { name: "Savings", mask: "0000" };
+
+  // Filter transactions based on search query
+  const filteredTransactions = account.transactions.filter(tx => 
+    tx.desc.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    tx.cat.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleTransfer = () => {
     executeTransfer("checking", "savings", transferAmount);
-    setTransferAmount(""); // Clear input
-    setActiveAction(null); // Close modal
+    setActionSuccess(true);
+    setTimeout(() => {
+      setActionSuccess(false);
+      setTransferAmount("");
+      setActiveAction(null);
+    }, 2000);
+  };
+
+  const handleDeposit = () => {
+    // In a real app, you'd process the images and add balance
+    setActionSuccess(true);
+    setTimeout(() => {
+      setActionSuccess(false);
+      setFrontCaptured(false);
+      setBackCaptured(false);
+      setActiveAction(null);
+    }, 2000);
+  };
+
+  const handleDownload = (month) => {
+    setDownloading(month);
+    setTimeout(() => {
+      setDownloading(null);
+      // Could trigger an actual browser download here
+    }, 1500);
+  };
+
+  const resetModalState = () => {
+    setActiveAction(null);
+    setActionSuccess(false);
+    setFrontCaptured(false);
+    setBackCaptured(false);
+    setTransferAmount("");
   };
 
   const renderModalContent = () => {
+    if (actionSuccess) {
+      return (
+        <div className="flex flex-col items-center justify-center py-10 space-y-4 animate-in zoom-in duration-300">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+            <CheckCircle2 className="w-10 h-10 text-green-600" />
+          </div>
+          <h4 className="text-xl font-semibold text-gray-900">Success!</h4>
+          <p className="text-gray-500 text-center">
+            {activeAction === "Transfer Funds" 
+              ? `Successfully transferred $${transferAmount} to ${targetAccount.name}.`
+              : "Your check has been submitted for review."}
+          </p>
+        </div>
+      );
+    }
+
     switch (activeAction) {
       case "Transfer Funds":
         return (
-          <div className="space-y-5">
+          <div className="space-y-5 animate-in fade-in duration-200">
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <p className="text-xs text-gray-500 font-semibold uppercase mb-1">From</p>
               <div className="flex justify-between items-center">
@@ -39,6 +102,12 @@ export default function CheckingAccount() {
               </div>
             </div>
             
+            <div className="flex justify-center -my-6 relative z-10 pointer-events-none">
+              <div className="bg-white border border-gray-200 p-2 rounded-full shadow-sm">
+                <ArrowRightLeft className="w-4 h-4 text-gray-400 rotate-90" />
+              </div>
+            </div>
+
             <div className="bg-white border border-gray-200 rounded-xl p-4 flex justify-between items-center">
               <div>
                 <p className="text-xs text-gray-500 font-semibold uppercase mb-1">To</p>
@@ -63,7 +132,7 @@ export default function CheckingAccount() {
             <button 
               onClick={handleTransfer}
               disabled={!transferAmount || transferAmount <= 0}
-              className={`w-full font-semibold py-4 rounded-xl mt-4 transition-colors ${transferAmount > 0 ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+              className={`w-full font-semibold py-4 rounded-xl mt-4 transition-colors ${transferAmount > 0 ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
               Confirm Transfer
             </button>
@@ -71,27 +140,75 @@ export default function CheckingAccount() {
         );
       case "Mobile Deposit":
         return (
-          <div className="space-y-4">
-            <div className="bg-gray-900 rounded-xl h-48 flex flex-col items-center justify-center border-2 border-dashed border-gray-500 relative overflow-hidden group cursor-pointer">
-              <Camera className="w-10 h-10 text-white mb-2" />
-              <span className="text-white font-medium">Tap to capture FRONT of check</span>
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <p className="text-sm text-gray-500 mb-4">Endorse the back of your check with "For Mobile Deposit Only".</p>
+            
+            <div 
+              onClick={() => setFrontCaptured(!frontCaptured)}
+              className={`rounded-xl h-40 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${frontCaptured ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
+            >
+              {frontCaptured ? (
+                <>
+                  <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
+                  <span className="text-green-700 font-medium">Front Captured</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-10 h-10 text-gray-400 mb-2" />
+                  <span className="text-gray-600 font-medium">Tap to capture FRONT</span>
+                </>
+              )}
             </div>
-            <div className="bg-gray-900 rounded-xl h-48 flex flex-col items-center justify-center border-2 border-dashed border-gray-500 relative overflow-hidden group cursor-pointer">
-              <Camera className="w-10 h-10 text-white mb-2" />
-              <span className="text-white font-medium">Tap to capture BACK of check</span>
+
+            <div 
+              onClick={() => setBackCaptured(!backCaptured)}
+              className={`rounded-xl h-40 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${backCaptured ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
+            >
+              {backCaptured ? (
+                <>
+                  <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
+                  <span className="text-green-700 font-medium">Back Captured</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-10 h-10 text-gray-400 mb-2" />
+                  <span className="text-gray-600 font-medium">Tap to capture BACK</span>
+                </>
+              )}
             </div>
+
+            <button 
+              onClick={handleDeposit}
+              disabled={!frontCaptured || !backCaptured}
+              className={`w-full font-semibold py-4 rounded-xl mt-4 transition-colors ${frontCaptured && backCaptured ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+            >
+              Submit Deposit
+            </button>
           </div>
         );
       case "Statements & Docs":
         return (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 -mx-6 px-6 animate-in fade-in duration-200">
             {['June 2026', 'May 2026', 'April 2026', 'March 2026'].map((month, i) => (
-              <div key={i} className="py-4 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+              <div 
+                key={i} 
+                onClick={() => handleDownload(month)}
+                className="py-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors group"
+              >
                 <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-gray-400" />
-                  <span className="font-medium text-gray-900">{month} Statement</span>
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-[#0b5cba]" />
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-900 block">{month} Statement</span>
+                    <span className="text-xs text-gray-500">PDF • 1.2 MB</span>
+                  </div>
                 </div>
-                <DownloadCloud className="w-5 h-5 text-[#0b5cba]" />
+                {downloading === month ? (
+                  <Loader2 className="w-5 h-5 text-[#0b5cba] animate-spin" />
+                ) : (
+                  <DownloadCloud className="w-5 h-5 text-gray-400 group-hover:text-[#0b5cba] transition-colors" />
+                )}
               </div>
             ))}
           </div>
@@ -101,82 +218,152 @@ export default function CheckingAccount() {
   };
 
   return (
-    <div className="w-full h-full bg-[#f4f5f9] text-gray-900 overflow-y-auto pb-24 font-sans flex flex-col relative">
-      <div className="bg-[#0b5cba] text-white pt-6 pb-4 px-4 sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors">
+    <div className="w-full h-full min-h-screen bg-[#f4f5f9] text-gray-900 pb-24 font-sans flex flex-col relative">
+      {/* Header */}
+      <div className="bg-[#0b5cba] text-white pt-6 pb-8 px-4 sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <button 
+            onClick={() => router.push('/dashboard')} 
+            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+          >
             <ArrowLeft className="w-6 h-6 text-white" />
           </button>
-          <span className="font-semibold text-lg uppercase">{account.name}</span>
+          <span className="font-semibold text-lg uppercase tracking-wider">{account.name}</span>
           <div className="w-10"></div>
         </div>
         <div className="text-center">
           <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance)}</p>
-          <p className="text-sm text-blue-100">Available balance</p>
+          <p className="text-sm text-blue-100 font-medium">Available balance</p>
         </div>
       </div>
 
-      <div className="px-4 space-y-4 -mt-2 relative z-20">
+      <div className="px-4 space-y-4 -mt-4 relative z-20">
+        
+        {/* Account Details Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex justify-between items-center mb-3">
+          <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
             <h3 className="font-semibold text-gray-900 text-sm">Account Details</h3>
-            <button onClick={() => setShowNumbers(!showNumbers)} className="text-[#0b5cba] flex items-center gap-1.5 text-sm font-medium hover:underline">
+            <button 
+              onClick={() => setShowNumbers(!showNumbers)} 
+              className="text-[#0b5cba] flex items-center gap-1.5 text-sm font-medium hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
+            >
               {showNumbers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               {showNumbers ? "Hide" : "Show"}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-gray-500 mb-0.5">Routing Number</p>
-              <p className="text-sm font-medium text-gray-900 font-mono tracking-wider">{showNumbers ? account.routing : `••••${account.routing.slice(-5)}`}</p>
+              <p className="text-xs text-gray-500 mb-1">Routing Number</p>
+              <p className="text-sm font-medium text-gray-900 font-mono tracking-wider">
+                {showNumbers ? account.routing : `••••${account.routing.slice(-5)}`}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-0.5">Account Number</p>
-              <p className="text-sm font-medium text-gray-900 font-mono tracking-wider">{showNumbers ? account.accountNum : `••••••${account.mask}`}</p>
+              <p className="text-xs text-gray-500 mb-1">Account Number</p>
+              <p className="text-sm font-medium text-gray-900 font-mono tracking-wider">
+                {showNumbers ? account.accountNum : `••••••${account.mask}`}
+              </p>
             </div>
           </div>
         </div>
 
+        {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-3">
-          <button onClick={() => setActiveAction("Transfer Funds")} className="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center"><ArrowRightLeft className="w-5 h-5 text-[#0b5cba]" /></div>
-            <span className="text-xs font-medium text-gray-700">Transfer</span>
+          <button 
+            onClick={() => setActiveAction("Transfer Funds")} 
+            className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
+          >
+            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center group-hover:bg-[#0b5cba] transition-colors">
+              <ArrowRightLeft className="w-5 h-5 text-[#0b5cba] group-hover:text-white transition-colors" />
+            </div>
+            <span className="text-xs font-semibold text-gray-700">Transfer</span>
           </button>
-          <button onClick={() => setActiveAction("Mobile Deposit")} className="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center"><Camera className="w-5 h-5 text-[#0b5cba]" /></div>
-            <span className="text-xs font-medium text-gray-700">Deposit</span>
+          <button 
+            onClick={() => setActiveAction("Mobile Deposit")} 
+            className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
+          >
+            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center group-hover:bg-[#0b5cba] transition-colors">
+              <Camera className="w-5 h-5 text-[#0b5cba] group-hover:text-white transition-colors" />
+            </div>
+            <span className="text-xs font-semibold text-gray-700">Deposit</span>
           </button>
-          <button onClick={() => setActiveAction("Statements & Docs")} className="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center"><Download className="w-5 h-5 text-[#0b5cba]" /></div>
-            <span className="text-xs font-medium text-gray-700">Statements</span>
+          <button 
+            onClick={() => setActiveAction("Statements & Docs")} 
+            className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
+          >
+            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center group-hover:bg-[#0b5cba] transition-colors">
+              <Download className="w-5 h-5 text-[#0b5cba] group-hover:text-white transition-colors" />
+            </div>
+            <span className="text-xs font-semibold text-gray-700">Statements</span>
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-            <div className="relative flex-1">
+        {/* Transactions List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+          <div className="p-4 border-b border-gray-100">
+            <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input type="text" placeholder="Search transactions" className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-9 pr-3 text-sm focus:outline-none focus:border-[#0b5cba] transition-all" />
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search transactions..." 
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:border-[#0b5cba] focus:ring-1 focus:ring-[#0b5cba] transition-all" 
+              />
             </div>
           </div>
+          
           <div className="divide-y divide-gray-100">
-            {account.transactions.length === 0 ? (
-              <p className="p-4 text-center text-gray-500 text-sm">No recent transactions</p>
+            {filteredTransactions.length === 0 ? (
+              <div className="p-8 text-center">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-6 h-6 text-gray-300" />
+                </div>
+                <p className="text-gray-500 text-sm font-medium">No transactions found</p>
+                <p className="text-gray-400 text-xs mt-1">Try adjusting your search terms.</p>
+              </div>
             ) : (
-              account.transactions.map((tx) => (
-                <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.amount > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
-                      <Building2 className={`w-5 h-5 ${tx.amount > 0 ? 'text-green-600' : 'text-gray-600'}`} />
+              filteredTransactions.map((tx) => (
+                <div key={tx.id} className="flex flex-col">
+                  {/* Transaction Row */}
+                  <div 
+                    onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
+                    className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.amount > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+                        <Building2 className={`w-5 h-5 ${tx.amount > 0 ? 'text-green-600' : 'text-gray-600'}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{tx.desc}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{tx.date} • {tx.cat}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{tx.desc}</p>
-                      <p className="text-xs text-gray-500">{tx.date} • {tx.cat}</p>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-semibold ${tx.amount > 0 ? 'text-[#1e8b4e]' : 'text-gray-900'}`}>
+                        {tx.amount > 0 ? '+' : ''}{formatMoney(tx.amount)}
+                      </span>
+                      {expandedTx === tx.id ? (
+                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      )}
                     </div>
                   </div>
-                  <span className={`text-sm font-semibold ${tx.amount > 0 ? 'text-[#1e8b4e]' : 'text-gray-900'}`}>
-                    {tx.amount > 0 ? '+' : ''}{formatMoney(tx.amount)}
-                  </span>
+                  
+                  {/* Expanded Details */}
+                  {expandedTx === tx.id && (
+                    <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 text-xs text-gray-600 flex justify-between animate-in slide-in-from-top-1 fade-in duration-200">
+                      <div className="space-y-1">
+                        <p><span className="font-medium text-gray-500">Status:</span> Cleared</p>
+                        <p><span className="font-medium text-gray-500">Method:</span> Electronic</p>
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <p><span className="font-medium text-gray-500">ID:</span> {Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+                        <button className="text-[#0b5cba] font-medium hover:underline mt-1 inline-block">Report Issue</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -184,13 +371,24 @@ export default function CheckingAccount() {
         </div>
       </div>
 
+      {/* Action Modals */}
       {activeAction && (
         <div className="fixed inset-0 z-[9999] flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setActiveAction(null)}></div>
-          <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 pb-28 animate-in slide-in-from-bottom duration-300 shadow-2xl min-h-[60vh] max-h-[90vh] overflow-y-auto flex flex-col">
-            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2 z-10">
-              <h3 className="font-semibold text-xl text-gray-900">{activeAction}</h3>
-              <button onClick={() => setActiveAction(null)} className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200"><X className="w-5 h-5" /></button>
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
+            onClick={resetModalState}
+          ></div>
+          <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 pb-12 animate-in slide-in-from-bottom-8 duration-300 shadow-2xl min-h-[50vh] max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2 z-10 border-b border-gray-50">
+              <h3 className="font-semibold text-xl text-gray-900">
+                {actionSuccess ? "" : activeAction}
+              </h3>
+              <button 
+                onClick={resetModalState} 
+                className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="flex-1">
               {renderModalContent()}

@@ -81,11 +81,76 @@ export function BankProvider({ children }) {
   const formatMoney = (amount) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
+  // NEW: executeTransfer function
+  const executeTransfer = async (fromAccountKey, toAccountKey, amountString) => {
+    const amount = parseFloat(amountString);
+    if (isNaN(amount) || amount <= 0) return;
+
+    // 1. Snapshot the current database state so we can revert if needed
+    const dbSnapshot = JSON.parse(JSON.stringify(db));
+
+    // 2. Optimistic UI Update (Instantly update React state)
+    setDb((prevDb) => {
+      if (!prevDb) return prevDb;
+      const newDb = JSON.parse(JSON.stringify(prevDb));
+      const fromAccount = newDb.accounts[fromAccountKey];
+      const toAccount = newDb.accounts[toAccountKey];
+
+      if (!fromAccount || !toAccount) return prevDb;
+
+      fromAccount.balance -= amount;
+      toAccount.balance += amount;
+
+      const todayFormatted = formatDate(new Date().toISOString());
+
+      fromAccount.transactions.unshift({
+        id: `tx_${Date.now()}_out`, desc: `Transfer to ${toAccount.name}`, date: todayFormatted, cat: 'Transfer', amount: -amount,
+      });
+
+      toAccount.transactions.unshift({
+        id: `tx_${Date.now()}_in`, desc: `Transfer from ${fromAccount.name}`, date: todayFormatted, cat: 'Transfer', amount: amount,
+      });
+
+      return newDb;
+    });
+
+    // 3. Send the transfer to the database
+    try {
+      const response = await fetch('/api/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromAccountKey,
+          toAccountKey,
+          amount
+        })
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          console.error("Backend rejected transfer:", errorData.error);
+        } else {
+          console.error(`Backend failed with status: ${response.status}`);
+        }
+        
+        // Use our snapshot to perfectly revert the UI
+        setDb(dbSnapshot); 
+        return;
+      }
+    } catch (error) {
+      console.error("Network error while saving transfer:", error);
+      setDb(dbSnapshot); // Revert on network failure too
+    }
+  };
+
   // HYDRATION FIX: Do not render the Context until the browser and server are perfectly synced
   if (!isMounted) return null;
 
   return (
-    <BankContext.Provider value={{ db, formatMoney }}>
+    // Export executeTransfer to the rest of the application
+    <BankContext.Provider value={{ db, formatMoney, executeTransfer }}>
       {/* 
         Instead of destroying the layout.js HTML, we render it safely via {children}.
         If the app is loading secure data, we render an overlay spinner ON TOP of the layout.
