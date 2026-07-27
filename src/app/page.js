@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, AlertTriangle, Home } from "lucide-react";
+import BankLogo from "@/components/BankLogo";
 
 export default function Login() {
   const router = useRouter();
@@ -57,9 +58,7 @@ export default function Login() {
         <header className="relative z-10 py-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-white">
             <span className="text-3xl font-bold tracking-wider">CHASE</span>
-            <div className="w-6 h-6 bg-blue-600 rounded-sm transform rotate-45 border-2 border-white flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-            </div>
+              <BankLogo className="w-8 h-8 text-[#0b5cba]" />
           </div>
         </header>
 
