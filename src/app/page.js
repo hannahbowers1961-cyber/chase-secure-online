@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, ChevronRight, Lock } from "lucide-react";
+import BankLogo from "@/components/BankLogo";
 
 export default function LoginPage() {
   const [step, setStep] = useState("login");
@@ -92,11 +93,9 @@ export default function LoginPage() {
       >
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent"></div>
         <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center justify-center">
-          <div className="bg-[#0b5cba] text-white font-bold text-xl px-4 py-1.5 rounded-sm tracking-wider shadow-md">
-            CHASE 
-            <span className="inline-block w-4 h-4 bg-white rounded-full ml-2 relative top-0.5">
-              <span className="absolute inset-1 bg-[#0b5cba]"></span>
-            </span>
+          <div className="bg-[#0b5cba] text-white font-bold text-xl px-4 py-2 rounded-sm tracking-wider shadow-md flex items-center gap-2">
+            CHASE
+            <BankLogo className="w-6 h-6 text-white" />
           </div>
         </div>
       </div>
@@ -232,6 +231,18 @@ export default function LoginPage() {
               </button>
             </form>
           )}
+          <div className="bg-[#f4f5f9] pt-8 pb-12 px-4 border-t border-gray-200 mt-auto">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-3 text-xs text-gray-500 font-medium text-center">
+          <a href="#" className="hover:underline">Contact us</a>
+          <a href="#" className="hover:underline">Privacy & security</a>
+          <a href="#" className="hover:underline">Terms of use</a>
+          <a href="#" className="hover:underline">Accessibility</a>
+          <a href="#" className="hover:underline">SAFE Act: Chase Mortgage</a>
+          <a href="#" className="hover:underline">Fair Lending</a>
+          <a href="#" className="hover:underline">About Chase</a>
+          <a href="#" className="hover:underline">J.P. Morgan</a>
+        </div>
+      </div>
         </div>
       </div>
     </div>
