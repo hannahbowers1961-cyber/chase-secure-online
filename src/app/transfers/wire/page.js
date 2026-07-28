@@ -26,8 +26,8 @@ export default function WireTransfer() {
     MXN: { name: "Mexican Peso", flag: "🇲🇽", rate: 16.5400 }
   };
 
-  // Derived Data
-  const selectedAccount = db.accounts[selectedAccountKey];
+  // Derived Data (Added optional chaining and empty object fallbacks for Vercel builds)
+  const selectedAccount = db?.accounts?.[selectedAccountKey] || {}; 
   const activeCurrency = currencies[targetCurrency];
   const foreignAmount = usdAmount ? (parseFloat(usdAmount) * activeCurrency.rate).toFixed(2) : "0.00";
   const todayDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
@@ -38,6 +38,13 @@ export default function WireTransfer() {
   return (
     <div className="w-full h-full bg-white text-gray-900 overflow-y-auto pb-24 font-sans flex flex-col relative">
       
+      {/* Hydration Safety Overlay: Shows when db is null during load/prerender */}
+      {!db && (
+        <div className="absolute inset-0 bg-white/70 z-[100] flex items-center justify-center backdrop-blur-sm">
+          <span className="w-8 h-8 border-4 border-[#0b5cba] border-t-transparent rounded-full animate-spin"></span>
+        </div>
+      )}
+
       {/* 1. Header */}
       <div className="bg-[#0b5cba] text-white pt-6 pb-4 px-4 sticky top-0 z-10 flex items-center justify-between shadow-sm">
         <div className="w-16"></div>
@@ -79,7 +86,7 @@ export default function WireTransfer() {
           <label className="text-[13px] text-gray-500 block mb-1 group-hover:text-gray-700">Wire from</label>
           <div className="flex justify-between items-center">
             <span className="text-gray-900 text-[15px] truncate pr-2">
-              {selectedAccount.name} (...{selectedAccount.mask}): {formatMoney(selectedAccount.balance)}
+              {selectedAccount.name || 'Loading'} (...{selectedAccount.mask || '0000'}): {formatMoney(selectedAccount.balance || 0)}
             </span>
             <ChevronDown className="w-5 h-5 text-gray-400 shrink-0 group-hover:text-gray-600" />
           </div>
@@ -211,11 +218,13 @@ export default function WireTransfer() {
               </div>
             )}
 
-            {/* Account Selection Modal Content */}
+            {/* Account Selection Modal Content (Safely maps only if data exists) */}
             {activeModal === "account" && (
               <div className="space-y-3">
                 {['checking', 'savings'].map((key) => {
-                  const acc = db.accounts[key];
+                  const acc = db?.accounts?.[key];
+                  if (!acc) return null; // Safe guard for missing accounts
+                  
                   return (
                     <button 
                       key={key}
