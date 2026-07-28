@@ -6,7 +6,7 @@ import { useBank } from "@/context/BankContext";
 import { 
   ArrowLeft, Eye, EyeOff, Search, ArrowRightLeft, 
   Download, X, FileText, DownloadCloud, Building2, 
-  CheckCircle2, ChevronDown, ChevronUp, Loader2 
+  CheckCircle2, ChevronDown, ChevronUp, Loader2, AlertCircle 
 } from "lucide-react";
 
 export default function SavingsAccount() {
@@ -23,27 +23,49 @@ export default function SavingsAccount() {
   // Modal Specific State
   const [transferAmount, setTransferAmount] = useState("");
   const [actionSuccess, setActionSuccess] = useState(false);
+  const [actionError, setActionError] = useState(""); // Validation error
+  const [isProcessing, setIsProcessing] = useState(false); // Real bank loading feel
   const [downloading, setDownloading] = useState(null);
 
-  const account = db?.accounts?.savings || { name: "Savings", balance: 0, mask: "0000", routing: "000000000", accountNum: "000000000000", transactions: [] };
-  const targetAccount = db?.accounts?.checking || { name: "Checking", mask: "0000" };
+  // Safe fallback while DB is loading
+  if (!db) return null;
 
-  // Filter transactions based on search query
-  const filteredTransactions = account.transactions.filter(tx => 
-    tx.desc.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    tx.cat.toLowerCase().includes(searchQuery.toLowerCase())
+  // STRICT DB BINDING: Use live data only
+  const account = db.accounts.savings;
+  const targetAccount = db.accounts.checking || { name: "Checking", mask: "0000" };
+  const liveTransactions = account?.transactions || [];
+
+  // Filter dynamic transactions based on search query
+  const filteredTransactions = liveTransactions.filter(tx => 
+    (tx.desc && tx.desc.toLowerCase().includes(searchQuery.toLowerCase())) || 
+    (tx.cat && tx.cat.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleTransfer = async () => {
-    // This now triggers the context function which we will update to hit the database
+    // 1. FRONTEND VALIDATION
+    const amountToTransfer = parseFloat(transferAmount);
+    
+    if (amountToTransfer > account.balance) {
+      setActionError("Insufficient balance for this transfer.");
+      return; 
+    }
+
+    setActionError("");
+    setIsProcessing(true); // Trigger the "real bank" loading spinner
+
+    // 2. Execute Transfer (simulating network delay for authenticity)
     await executeTransfer("savings", "checking", transferAmount);
     
-    setActionSuccess(true);
+    // Hold the loading state for just a moment longer to feel secure
     setTimeout(() => {
-      setActionSuccess(false);
-      setTransferAmount("");
-      setActiveAction(null);
-    }, 2000);
+      setIsProcessing(false);
+      setActionSuccess(true);
+      setTimeout(() => {
+        setActionSuccess(false);
+        setTransferAmount("");
+        setActiveAction(null);
+      }, 2000);
+    }, 600); 
   };
 
   const handleDownload = (month) => {
@@ -56,6 +78,8 @@ export default function SavingsAccount() {
   const resetModalState = () => {
     setActiveAction(null);
     setActionSuccess(false);
+    setActionError("");
+    setIsProcessing(false);
     setTransferAmount("");
   };
 
@@ -81,8 +105,8 @@ export default function SavingsAccount() {
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <p className="text-xs text-gray-500 font-semibold uppercase mb-1">From</p>
               <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-900">{account.name} (...{account.mask})</span>
-                <span className="text-sm text-gray-500">{formatMoney(account.balance)}</span>
+                <span className="font-semibold text-gray-900">{account?.name} (...{account?.mask})</span>
+                <span className="text-sm text-gray-500">{formatMoney(account?.balance || 0)}</span>
               </div>
             </div>
             
@@ -99,26 +123,46 @@ export default function SavingsAccount() {
               </div>
             </div>
             
-            <div className="bg-white border border-gray-200 rounded-xl p-4 focus-within:border-[#0b5cba] focus-within:ring-1 transition-all">
+            <div className={`bg-white border rounded-xl p-4 transition-all ${actionError ? 'border-red-400 ring-1 ring-red-400' : 'border-gray-200 focus-within:border-[#0b5cba] focus-within:ring-1'}`}>
               <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Amount</p>
               <div className="flex items-center text-3xl font-light">
                 <span className="text-gray-400 mr-1">$</span>
                 <input 
                   type="number" 
                   value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
+                  onChange={(e) => {
+                    setTransferAmount(e.target.value);
+                    if (actionError) setActionError(""); 
+                  }}
+                  disabled={isProcessing}
                   placeholder="0.00" 
-                  className="w-full outline-none bg-transparent placeholder:text-gray-300 text-gray-900" 
+                  className={`w-full outline-none bg-transparent placeholder:text-gray-300 ${actionError ? 'text-red-600' : 'text-gray-900'} ${isProcessing ? 'opacity-50' : ''}`} 
                 />
               </div>
             </div>
+
+            {/* Error Alert */}
+            {actionError && (
+              <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 font-medium">{actionError}</p>
+              </div>
+            )}
             
+            {/* Dynamic Processing Button */}
             <button 
               onClick={handleTransfer}
-              disabled={!transferAmount || transferAmount <= 0}
-              className={`w-full font-semibold py-4 rounded-xl mt-4 transition-colors ${transferAmount > 0 ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+              disabled={!transferAmount || transferAmount <= 0 || isProcessing}
+              className={`w-full font-semibold py-4 rounded-xl mt-4 flex items-center justify-center gap-2 transition-colors ${transferAmount > 0 && !isProcessing ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
-              Confirm Transfer
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Confirm Transfer"
+              )}
             </button>
           </div>
         );
@@ -153,6 +197,9 @@ export default function SavingsAccount() {
     }
   };
 
+  // Prevent rendering if account doesn't exist in the database
+  if (!account) return <div className="p-8 text-center">Savings account not found.</div>;
+
   return (
     <div className="w-full h-full min-h-screen bg-[#f4f5f9] text-gray-900 pb-24 font-sans flex flex-col relative">
       {/* Header */}
@@ -168,7 +215,7 @@ export default function SavingsAccount() {
           <div className="w-10"></div>
         </div>
         <div className="text-center">
-          <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance)}</p>
+          <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance || 0)}</p>
           <p className="text-sm text-blue-100 font-medium">Available balance</p>
         </div>
       </div>
@@ -191,7 +238,7 @@ export default function SavingsAccount() {
             <div>
               <p className="text-xs text-gray-500 mb-1">Routing Number</p>
               <p className="text-sm font-medium text-gray-900 font-mono tracking-wider">
-                {showNumbers ? account.routing : `••••${account.routing.slice(-5)}`}
+                {showNumbers ? account.routing : `••••${(account.routing || '0000').toString().slice(-5)}`}
               </p>
             </div>
             <div>
@@ -225,7 +272,7 @@ export default function SavingsAccount() {
           </button>
         </div>
         
-        {/* Transactions List */}
+        {/* Transactions List linked directly to DB */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="p-4 border-b border-gray-100">
             <div className="relative">
@@ -286,7 +333,7 @@ export default function SavingsAccount() {
                         <p><span className="font-medium text-gray-500">Method:</span> Electronic</p>
                       </div>
                       <div className="space-y-1 text-right">
-                        <p><span className="font-medium text-gray-500">ID:</span> {Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+                        <p><span className="font-medium text-gray-500">ID:</span> {tx.id.toString().toUpperCase().substring(0, 12)}</p>
                         <button className="text-[#0b5cba] font-medium hover:underline mt-1 inline-block">Report Issue</button>
                       </div>
                     </div>

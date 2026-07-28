@@ -54,11 +54,9 @@ export default function Dashboard() {
     e.preventDefault();
     if (!chatMessage.trim()) return;
     
-    // Add user message
     setChatHistory(prev => [...prev, { sender: 'user', text: chatMessage }]);
     setChatMessage("");
     
-    // Simulate bot thinking and responding
     setTimeout(() => {
       setChatHistory(prev => [...prev, { 
         sender: 'bot', 
@@ -69,10 +67,19 @@ export default function Dashboard() {
 
   if (!db) return null;
 
+  // --- DYNAMIC CALCULATIONS ---
+  // Get first name for greeting
+  const userName = db.user?.firstName || (db.user?.name ? db.user.name.split(' ')[0] : "");
+  
+  // Calculate dynamic account counts based on what actually exists in the DB
+  const bankAccountsCount = [!!db.accounts?.checking, !!db.accounts?.savings].filter(Boolean).length;
+  const creditCardsCount = [!!db.accounts?.freedom, !!db.accounts?.freedomUnlimited].filter(Boolean).length;
+  const loansCount = [!!db.accounts?.autoLoan].filter(Boolean).length;
+
   return (
     <div className="w-full h-full bg-[#f4f5f9] overflow-y-auto pb-24 font-sans relative">
       
-      {/* Top App Bar - UPDATED WITH INTERACTIVITY */}
+      {/* Top App Bar */}
       <div className="flex items-center justify-between px-4 py-3 bg-[#f4f5f9] sticky top-0 z-20">
         <div className="flex gap-4">
           <button onClick={() => setIsChatOpen(true)} className="hover:bg-blue-50 p-1.5 -ml-1.5 rounded-full transition-colors">
@@ -84,16 +91,15 @@ export default function Dashboard() {
         </div>
         <BankLogo className="w-8 h-8 text-[#0b5cba]" />
         
-        {/* Profile Link */}
         <Link href="/dashboard/profile" className="hover:bg-blue-50 p-1 -mr-1 rounded-full transition-colors">
           <UserCircle className="w-8 h-8 text-[#0b5cba]" />
         </Link>
       </div>
 
       <div className="px-4 pt-2">
-        {/* Authentic Header */}
+        {/* Dynamic Header */}
         <h1 className="text-[28px] font-semibold text-gray-900 tracking-tight leading-tight">
-          {greeting}
+          {greeting}{userName ? `, ${userName}` : ""}
         </h1>
         <p className="text-sm text-gray-600 mt-1 mb-5">{currentDate}</p>
 
@@ -128,153 +134,169 @@ export default function Dashboard() {
           <MoreHorizontal className="w-6 h-6 text-gray-600" />
         </div>
 
-        {/* 1. BANK ACCOUNTS BLOCK */}
-        <div className="bg-white border border-gray-300 rounded-xl overflow-hidden mb-6 shadow-sm">
-          <div className="bg-[#0b5cba] px-4 py-3.5">
-            <h3 className="text-white font-semibold text-[15px]">Bank accounts (2)</h3>
-          </div>
-          
-          <div className="divide-y divide-gray-200">
-            <Link href="/dashboard/checking" className="block p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center text-[15px] text-gray-800 mb-1">
-                {db.accounts.checking?.name} (...{db.accounts.checking?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
-              </div>
-              <div className="text-right">
-                <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                  {formatMoney(db.accounts.checking?.balance || 0)}
-                </div>
-                <div className="text-[13px] text-gray-500 font-medium">Available balance</div>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/savings" className="block p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center text-[15px] text-gray-800 mb-1">
-                {db.accounts.savings?.name} (...{db.accounts.savings?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
-              </div>
-              <div className="text-right">
-                <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                  {formatMoney(db.accounts.savings?.balance || 0)}
-                </div>
-                <div className="text-[13px] text-gray-500 font-medium">Available balance</div>
-              </div>
-            </Link>
-
-            <Link href="/transfers/external" className="flex justify-between items-center p-4 hover:bg-gray-50 transition-colors">
-              <span className="font-semibold text-gray-900 text-[15px]">Link external accounts</span>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </Link>
-          </div>
-        </div>
-
-        {/* 2. CREDIT CARDS BLOCK */}
-        <div className="bg-white border border-gray-300 rounded-xl overflow-hidden mb-6 shadow-sm">
-          <div className="bg-[#0b5cba] px-4 py-3.5">
-            <h3 className="text-white font-semibold text-[15px]">Credit cards (2)</h3>
-          </div>
-          
-          <div className="divide-y divide-gray-200">
-            <Link href="/dashboard/freedom" className="block p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center text-[15px] text-gray-800 mb-4">
-                {db.accounts.freedom?.name} (...{db.accounts.freedom?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
-              </div>
-              <div className="flex justify-between items-start mb-3">
-                <div className="w-20 h-[52px] rounded-md bg-gradient-to-br from-[#1F618D] via-[#2980B9] to-[#85C1E9] p-1.5 relative overflow-hidden shadow-sm border border-blue-800/20">
-                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
-                    <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
-                    <span className="text-[6px] text-white font-bold tracking-wider opacity-90">freedom</span>
+        {/* 1. BANK ACCOUNTS BLOCK (Conditionally Rendered) */}
+        {bankAccountsCount > 0 && (
+          <div className="bg-white border border-gray-300 rounded-xl overflow-hidden mb-6 shadow-sm">
+            <div className="bg-[#0b5cba] px-4 py-3.5">
+              <h3 className="text-white font-semibold text-[15px]">Bank accounts ({bankAccountsCount})</h3>
+            </div>
+            
+            <div className="divide-y divide-gray-200">
+              {db.accounts.checking && (
+                <Link href="/dashboard/checking" className="block p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center text-[15px] text-gray-800 mb-1">
+                    {db.accounts.checking.name} (...{db.accounts.checking.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
                   </div>
-                  <span className="absolute bottom-1 right-1.5 text-[5px] text-white font-bold opacity-80 italic">VISA</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                    {formatMoney(Math.abs(db.accounts.freedom?.balance || 0))}
+                  <div className="text-right">
+                    <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
+                      {formatMoney(db.accounts.checking.balance || 0)}
+                    </div>
+                    <div className="text-[13px] text-gray-500 font-medium">Available balance</div>
                   </div>
-                  <div className="text-[13px] text-gray-500 font-medium">Current balance</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 text-[13px] text-[#1e8b4e] font-medium">
-                <Check className="w-3.5 h-3.5" strokeWidth={3} />
-                You don't have a payment due right now.
-              </div>
-            </Link>
+                </Link>
+              )}
 
-            <Link href="/dashboard/credit-card" className="block p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center text-[15px] text-gray-800 mb-4">
-                {db.accounts.freedomUnlimited?.name} (...{db.accounts.freedomUnlimited?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
-              </div>
-              <div className="flex justify-between items-start">
-                <div className="w-20 h-[52px] rounded-md bg-gradient-to-br from-[#1A5276] via-[#2471A3] to-[#5DADE2] p-1.5 relative overflow-hidden shadow-sm border border-blue-800/20">
-                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
-                    <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
-                    <div className="flex flex-col leading-none">
-                      <span className="text-[6px] text-white font-bold tracking-wider opacity-90">freedom</span>
-                      <span className="text-[4px] text-white font-medium opacity-80 uppercase tracking-widest mt-[1px]">unlimited</span>
+              {db.accounts.savings && (
+                <Link href="/dashboard/savings" className="block p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center text-[15px] text-gray-800 mb-1">
+                    {db.accounts.savings.name} (...{db.accounts.savings.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
+                      {formatMoney(db.accounts.savings.balance || 0)}
+                    </div>
+                    <div className="text-[13px] text-gray-500 font-medium">Available balance</div>
+                  </div>
+                </Link>
+              )}
+
+              <Link href="/transfers/external" className="flex justify-between items-center p-4 hover:bg-gray-50 transition-colors">
+                <span className="font-semibold text-gray-900 text-[15px]">Link external accounts</span>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* 2. CREDIT CARDS BLOCK (Conditionally Rendered) */}
+        {creditCardsCount > 0 && (
+          <div className="bg-white border border-gray-300 rounded-xl overflow-hidden mb-6 shadow-sm">
+            <div className="bg-[#0b5cba] px-4 py-3.5">
+              <h3 className="text-white font-semibold text-[15px]">Credit cards ({creditCardsCount})</h3>
+            </div>
+            
+            <div className="divide-y divide-gray-200">
+              {db.accounts.freedom && (
+                <Link href="/dashboard/freedom" className="block p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center text-[15px] text-gray-800 mb-4">
+                    {db.accounts.freedom.name} (...{db.accounts.freedom.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                  </div>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="w-20 h-[52px] rounded-md bg-gradient-to-br from-[#1F618D] via-[#2980B9] to-[#85C1E9] p-1.5 relative overflow-hidden shadow-sm border border-blue-800/20">
+                      <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+                        <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
+                        <span className="text-[6px] text-white font-bold tracking-wider opacity-90">freedom</span>
+                      </div>
+                      <span className="absolute bottom-1 right-1.5 text-[5px] text-white font-bold opacity-80 italic">VISA</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
+                        {formatMoney(Math.abs(db.accounts.freedom.balance || 0))}
+                      </div>
+                      <div className="text-[13px] text-gray-500 font-medium">Current balance</div>
                     </div>
                   </div>
-                  <span className="absolute bottom-1 right-1.5 text-[5px] text-white font-bold opacity-80 italic">VISA</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                    {formatMoney(Math.abs(db.accounts.freedomUnlimited?.balance || 0))}
+                  <div className="flex items-center gap-1.5 text-[13px] text-[#1e8b4e] font-medium">
+                    <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                    You don't have a payment due right now.
                   </div>
-                  <div className="text-[13px] text-gray-500 font-medium">Current balance</div>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
+                </Link>
+              )}
 
-        {/* 3. AUTO / HOME LOANS BLOCK */}
-        <div className="bg-white border border-gray-300 rounded-xl overflow-hidden mb-6 shadow-sm">
-          <div className="bg-[#0b5cba] px-4 py-3.5">
-            <h3 className="text-white font-semibold text-[15px]">Auto / Home Loans (1)</h3>
-          </div>
-          <div className="divide-y divide-gray-200">
-            <Link href="/dashboard/loans" className="block p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center text-[15px] text-gray-800">
-                  {db.accounts.autoLoan?.name} (...{db.accounts.autoLoan?.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
-                </div>
-              </div>
-              <div className="flex justify-between items-start">
-                <div className="w-20 h-[52px] rounded-md bg-gray-100 flex items-center justify-center border border-gray-200">
-                  <Car className="w-8 h-8 text-gray-400" />
-                </div>
-                <div className="text-right">
-                  <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
-                    {formatMoney(Math.abs(db.accounts.autoLoan?.balance || 0))}
+              {db.accounts.freedomUnlimited && (
+                <Link href="/dashboard/credit-card" className="block p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center text-[15px] text-gray-800 mb-4">
+                    {db.accounts.freedomUnlimited.name} (...{db.accounts.freedomUnlimited.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
                   </div>
-                  <div className="text-[13px] text-gray-500 font-medium">Remaining balance</div>
-                </div>
-              </div>
-            </Link>
+                  <div className="flex justify-between items-start">
+                    <div className="w-20 h-[52px] rounded-md bg-gradient-to-br from-[#1A5276] via-[#2471A3] to-[#5DADE2] p-1.5 relative overflow-hidden shadow-sm border border-blue-800/20">
+                      <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+                        <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
+                        <div className="flex flex-col leading-none">
+                          <span className="text-[6px] text-white font-bold tracking-wider opacity-90">freedom</span>
+                          <span className="text-[4px] text-white font-medium opacity-80 uppercase tracking-widest mt-[1px]">unlimited</span>
+                        </div>
+                      </div>
+                      <span className="absolute bottom-1 right-1.5 text-[5px] text-white font-bold opacity-80 italic">VISA</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
+                        {formatMoney(Math.abs(db.accounts.freedomUnlimited.balance || 0))}
+                      </div>
+                      <div className="text-[13px] text-gray-500 font-medium">Current balance</div>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* 3. AUTO / HOME LOANS BLOCK (Conditionally Rendered) */}
+        {loansCount > 0 && (
+          <div className="bg-white border border-gray-300 rounded-xl overflow-hidden mb-6 shadow-sm">
+            <div className="bg-[#0b5cba] px-4 py-3.5">
+              <h3 className="text-white font-semibold text-[15px]">Auto / Home Loans ({loansCount})</h3>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {db.accounts.autoLoan && (
+                <Link href="/dashboard/loans" className="block p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center text-[15px] text-gray-800">
+                      {db.accounts.autoLoan.name} (...{db.accounts.autoLoan.mask}) <ChevronRight className="w-4 h-4 ml-0.5 text-gray-400" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <div className="w-20 h-[52px] rounded-md bg-gray-100 flex items-center justify-center border border-gray-200">
+                      <Car className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[28px] font-light text-gray-900 tracking-tight leading-none mb-1">
+                        {formatMoney(Math.abs(db.accounts.autoLoan.balance || 0))}
+                      </div>
+                      <div className="text-[13px] text-gray-500 font-medium">Remaining balance</div>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 4. CREDITWISE (CREDIT JOURNEY) BLOCK */}
-        <div className="mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden">
-            <Link href="/dashboard/creditwise" className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#eef4fb] flex items-center justify-center border border-blue-100">
-                  <Gauge className="w-6 h-6 text-[#0b5cba]" />
+        {db.user?.creditScore && (
+          <div className="mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden">
+              <Link href="/dashboard/creditwise" className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-[#eef4fb] flex items-center justify-center border border-blue-100">
+                    <Gauge className="w-6 h-6 text-[#0b5cba]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-[15px]">Credit Journey</h3>
+                    <p className="text-xs text-gray-600 mt-0.5">Your score is <span className="font-bold text-[#1e8b4e]">{db.user.creditScore}</span></p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-[15px]">Credit Journey</h3>
-                  <p className="text-xs text-gray-600 mt-0.5">Your score is <span className="font-bold text-[#1e8b4e]">{db.user?.creditScore}</span></p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </Link>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* --- SEARCH OVERLAY MODAL --- */}
       {isSearchOpen && (
         <div className="fixed inset-0 z-[9999] bg-white flex flex-col sm:max-w-md sm:mx-auto sm:border-x sm:border-gray-200 animate-in fade-in duration-200">
-          
-          {/* Mobile Header Area */}
           <div className="flex items-center gap-3 p-4 border-b border-gray-100 bg-white pt-6">
             <button 
               onClick={() => {setIsSearchOpen(false); setSearchQuery("");}} 
@@ -303,7 +325,6 @@ export default function Dashboard() {
             </div>
           </div>
           
-          {/* Results Area */}
           <div className="flex-1 overflow-y-auto bg-white">
             {searchQuery && filteredSearch.length === 0 ? (
               <div className="flex flex-col items-center justify-center pt-12 px-4 text-center">
@@ -339,8 +360,7 @@ export default function Dashboard() {
 
       {/* --- CHAT ASSISTANT MODAL --- */}
       {isChatOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white sm:max-w-md sm:mx-auto sm:my-10 sm:rounded-2xl sm:shadow-2xl sm:border border-gray-200 animate-in slide-in-from-bottom duration-300 overflow-hidden">
-          {/* Header */}
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-white sm:max-w-md sm:mx-auto sm:my-10 sm:rounded-2xl sm:shadow-2xl sm:border border-gray-200 animate-in slide-in-from-bottom duration-300 overflow-hidden">
           <div className="bg-[#0b5cba] text-white p-4 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -356,7 +376,6 @@ export default function Dashboard() {
             </button>
           </div>
           
-          {/* Chat History */}
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-4">
             {chatHistory.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -367,7 +386,6 @@ export default function Dashboard() {
             ))}
           </div>
           
-          {/* Input Area */}
           <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-200 flex items-center gap-2">
             <input 
               type="text" 

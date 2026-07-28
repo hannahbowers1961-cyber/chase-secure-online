@@ -1,9 +1,40 @@
 "use client";
 
 import Link from "next/link";
+import { useBank } from "@/context/BankContext";
 import { ArrowLeft, ShieldCheck, TrendingUp, AlertTriangle, Eye, Lock } from "lucide-react";
 
 export default function CreditHealth() {
+  const { db } = useBank();
+
+  // Safe fallback while DB is loading
+  if (!db) return null;
+
+  // Pull live score from the DB
+  const creditScore = db.user?.creditScore || 0;
+
+  // Dynamically calculate the score tier and colors
+  let scoreCategory = "Needs Work";
+  let scoreColor = "text-red-500";
+  let borderColor = "border-red-500";
+
+  if (creditScore >= 740) {
+    scoreCategory = "Excellent";
+    scoreColor = "text-[#1e8b4e]"; // Green
+    borderColor = "border-[#1e8b4e]";
+  } else if (creditScore >= 670) {
+    scoreCategory = "Good";
+    scoreColor = "text-[#0b5cba]"; // Blue
+    borderColor = "border-[#0b5cba]";
+  } else if (creditScore >= 580) {
+    scoreCategory = "Fair";
+    scoreColor = "text-orange-500"; // Orange
+    borderColor = "border-orange-500";
+  }
+
+  // Get today's date dynamically
+  const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
   return (
     <div className="w-full h-full bg-[#f4f5f9] text-gray-900 overflow-y-auto pb-24 font-sans flex flex-col">
       
@@ -18,16 +49,18 @@ export default function CreditHealth() {
 
       <div className="px-4 space-y-4 pt-6">
         
-        {/* Score Gauge Widget */}
+        {/* Dynamic Score Gauge Widget */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center">
-          <div className="w-48 h-48 rounded-full border-[12px] border-[#1e8b4e] border-t-gray-100 flex flex-col items-center justify-center relative rotate-45">
+          <div className={`w-48 h-48 rounded-full border-[12px] ${borderColor} border-t-gray-100 flex flex-col items-center justify-center relative rotate-45 transition-colors duration-500`}>
             <div className="flex flex-col items-center justify-center -rotate-45 mt-4">
-              <span className="text-5xl font-light text-gray-900">742</span>
-              <span className="text-[#1e8b4e] font-bold text-lg mt-1 tracking-wide uppercase">Excellent</span>
+              <span className="text-5xl font-light text-gray-900">{creditScore}</span>
+              <span className={`${scoreColor} font-bold text-lg mt-1 tracking-wide uppercase transition-colors duration-500`}>
+                {scoreCategory}
+              </span>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-6 text-center">Powered by <strong>TransUnion®</strong></p>
-          <p className="text-xs text-gray-400 mt-1">Updated on Oct 11, 2023</p>
+          <p className="text-xs text-gray-400 mt-1">Updated on {todayDate}</p>
         </div>
 
         {/* Tools & Simulators */}

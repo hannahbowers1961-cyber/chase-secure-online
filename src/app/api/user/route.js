@@ -4,6 +4,9 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+// FIX 1: Completely disable Next.js server-side caching for this endpoint
+export const dynamic = 'force-dynamic';
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
@@ -32,22 +35,17 @@ export async function GET(req) {
 
     if (!userData) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // Calculate dynamic enterprise balances
-    const accountsWithMath = userData.accounts.map(acc => {
-      const balance = acc.transactions.reduce((sum, tx) => sum + tx.amount, 0);
-      return { ...acc, balance };
-    });
-
-    const snapshotAmount = accountsWithMath
-      .filter(a => a.type === 'DEPOSITORY')
-      .reduce((sum, a) => sum + a.balance, 0);
+    // FIX 2: Trust the database balance column! Do not overwrite it with transaction math.
+    const snapshotAmount = userData.accounts
+      .filter(a => a.type === 'DEPOSITORY') // Typically Checking/Savings
+      .reduce((sum, a) => sum + (a.balance || 0), 0);
 
     // Remove the hashed password before sending data to the frontend
     const { password, ...safeUserData } = userData;
 
     return NextResponse.json({
       ...safeUserData,
-      accounts: accountsWithMath,
+      accounts: userData.accounts, // Pass accounts exactly as they are in the database
       snapshotAmount
     });
   } catch (error) {

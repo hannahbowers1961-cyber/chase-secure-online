@@ -1,17 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useBank } from "@/context/BankContext";
 import { 
   ArrowLeft, Eye, EyeOff, Search, Camera, ArrowRightLeft, 
   Download, Building2, X, FileText, DownloadCloud, CheckCircle2, 
-  ChevronDown, ChevronUp, Loader2 
+  ChevronDown, ChevronUp, Loader2, AlertCircle
 } from "lucide-react";
 
 export default function CheckingAccount() {
   const router = useRouter();
-  
   const { db, formatMoney, executeTransfer } = useBank();
   
   // Base UI State
@@ -20,40 +19,61 @@ export default function CheckingAccount() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedTx, setExpandedTx] = useState(null);
   
-  // Modal Specific State
+  // Modal & Camera Specific State
   const [transferAmount, setTransferAmount] = useState("");
   const [actionSuccess, setActionSuccess] = useState(false);
-  const [frontCaptured, setFrontCaptured] = useState(false);
-  const [backCaptured, setBackCaptured] = useState(false);
+  const [actionError, setActionError] = useState(""); // NEW: Error state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [frontImage, setFrontImage] = useState(null);
+  const [backImage, setBackImage] = useState(null);
   const [downloading, setDownloading] = useState(null);
 
-  const account = db?.accounts?.checking || { name: "Checking", balance: 0, mask: "0000", routing: "000000000", accountNum: "000000000000", transactions: [] };
-  const targetAccount = db?.accounts?.savings || { name: "Savings", mask: "0000" };
+  // Hidden references to trigger the native camera
+  const frontInputRef = useRef(null);
+  const backInputRef = useRef(null);
 
-  // Filter transactions based on search query
-  const filteredTransactions = account.transactions.filter(tx => 
-    tx.desc.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    tx.cat.toLowerCase().includes(searchQuery.toLowerCase())
+  // Safe fallback while DB is loading to prevent crashes
+  if (!db) return null;
+
+  // STRICT DB BINDING: We only use actual data from the PostgreSQL database
+  const account = db.accounts.checking;
+  const targetAccount = db.accounts.savings || { name: "Savings", mask: "0000" };
+  const liveTransactions = account?.transactions || [];
+
+  // Filter dynamic transactions based on search query
+  const filteredTransactions = liveTransactions.filter(tx => 
+    (tx.desc && tx.desc.toLowerCase().includes(searchQuery.toLowerCase())) || 
+    (tx.cat && tx.cat.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleTransfer = () => {
-    executeTransfer("checking", "savings", transferAmount);
-    setActionSuccess(true);
+  const handleTransfer = async () => {
+    const amountToTransfer = parseFloat(transferAmount);
+    
+    if (amountToTransfer > account.balance) {
+      setActionError("Insufficient balance for this transfer.");
+      return; 
+    }
+
+    setActionError("");
+    setIsProcessing(true);
+
+    await executeTransfer("checking", "savings", transferAmount);
+    
     setTimeout(() => {
-      setActionSuccess(false);
-      setTransferAmount("");
-      setActiveAction(null);
-    }, 2000);
+      setIsProcessing(false);
+      setActionSuccess(true);
+      setTimeout(() => {
+        setActionSuccess(false);
+        setTransferAmount("");
+        setActiveAction(null);
+      }, 2000);
+    }, 600); 
   };
 
   const handleDeposit = () => {
-    // In a real app, you'd process the images and add balance
     setActionSuccess(true);
     setTimeout(() => {
-      setActionSuccess(false);
-      setFrontCaptured(false);
-      setBackCaptured(false);
-      setActiveAction(null);
+      resetModalState();
     }, 2000);
   };
 
@@ -61,16 +81,21 @@ export default function CheckingAccount() {
     setDownloading(month);
     setTimeout(() => {
       setDownloading(null);
-      // Could trigger an actual browser download here
     }, 1500);
   };
 
   const resetModalState = () => {
     setActiveAction(null);
     setActionSuccess(false);
-    setFrontCaptured(false);
-    setBackCaptured(false);
+    setActionError(""); // Reset errors on close
+    setIsProcessing(false);
     setTransferAmount("");
+    
+    // Clean up browser memory from image objects
+    if (frontImage) URL.revokeObjectURL(frontImage);
+    if (backImage) URL.revokeObjectURL(backImage);
+    setFrontImage(null);
+    setBackImage(null);
   };
 
   const renderModalContent = () => {
@@ -97,8 +122,8 @@ export default function CheckingAccount() {
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <p className="text-xs text-gray-500 font-semibold uppercase mb-1">From</p>
               <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-900">{account.name} (...{account.mask})</span>
-                <span className="text-sm text-gray-500">{formatMoney(account.balance)}</span>
+                <span className="font-semibold text-gray-900">{account?.name} (...{account?.mask})</span>
+                <span className="text-sm text-gray-500">{formatMoney(account?.balance || 0)}</span>
               </div>
             </div>
             
@@ -115,26 +140,45 @@ export default function CheckingAccount() {
               </div>
             </div>
             
-            <div className="bg-white border border-gray-200 rounded-xl p-4 focus-within:border-[#0b5cba] focus-within:ring-1 transition-all">
+            <div className={`bg-white border rounded-xl p-4 transition-all ${actionError ? 'border-red-400 ring-1 ring-red-400' : 'border-gray-200 focus-within:border-[#0b5cba] focus-within:ring-1'}`}>
               <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Amount</p>
               <div className="flex items-center text-3xl font-light">
                 <span className="text-gray-400 mr-1">$</span>
                 <input 
                   type="number" 
                   value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
+                  onChange={(e) => {
+                    setTransferAmount(e.target.value);
+                    if (actionError) setActionError(""); 
+                  }}
+                  disabled={isProcessing}
                   placeholder="0.00" 
-                  className="w-full outline-none bg-transparent placeholder:text-gray-300 text-gray-900" 
+                  className={`w-full outline-none bg-transparent placeholder:text-gray-300 ${actionError ? 'text-red-600' : 'text-gray-900'} ${isProcessing ? 'opacity-50' : ''}`} 
                 />
               </div>
             </div>
+
+            {/* NEW: Clean, native error alert */}
+            {actionError && (
+              <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 font-medium">{actionError}</p>
+              </div>
+            )}
             
             <button 
               onClick={handleTransfer}
-              disabled={!transferAmount || transferAmount <= 0}
-              className={`w-full font-semibold py-4 rounded-xl mt-4 transition-colors ${transferAmount > 0 ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+              disabled={!transferAmount || transferAmount <= 0 || isProcessing}
+              className={`w-full font-semibold py-4 rounded-xl mt-4 flex items-center justify-center gap-2 transition-colors ${transferAmount > 0 && !isProcessing ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
-              Confirm Transfer
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Confirm Transfer"
+              )}
             </button>
           </div>
         );
@@ -143,14 +187,31 @@ export default function CheckingAccount() {
           <div className="space-y-4 animate-in fade-in duration-200">
             <p className="text-sm text-gray-500 mb-4">Endorse the back of your check with "For Mobile Deposit Only".</p>
             
+            {/* Native Camera Input: FRONT */}
+            <input 
+              type="file" 
+              accept="image/*" 
+              capture="environment" 
+              ref={frontInputRef}
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setFrontImage(URL.createObjectURL(e.target.files[0]));
+                }
+              }}
+            />
             <div 
-              onClick={() => setFrontCaptured(!frontCaptured)}
-              className={`rounded-xl h-40 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${frontCaptured ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
+              onClick={() => frontInputRef.current?.click()}
+              className={`relative rounded-xl h-40 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer overflow-hidden ${frontImage ? 'border-green-500 bg-green-50' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
             >
-              {frontCaptured ? (
+              {frontImage ? (
                 <>
-                  <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
-                  <span className="text-green-700 font-medium">Front Captured</span>
+                  <img src={frontImage} alt="Front of check" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+                  <div className="relative z-10 flex flex-col items-center">
+                    <CheckCircle2 className="w-10 h-10 text-green-700 mb-2 drop-shadow-md" />
+                    <span className="text-green-800 font-bold drop-shadow-md">Front Captured</span>
+                    <span className="text-green-700 text-xs mt-1 underline">Tap to retake</span>
+                  </div>
                 </>
               ) : (
                 <>
@@ -160,14 +221,31 @@ export default function CheckingAccount() {
               )}
             </div>
 
+            {/* Native Camera Input: BACK */}
+            <input 
+              type="file" 
+              accept="image/*" 
+              capture="environment" 
+              ref={backInputRef}
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setBackImage(URL.createObjectURL(e.target.files[0]));
+                }
+              }}
+            />
             <div 
-              onClick={() => setBackCaptured(!backCaptured)}
-              className={`rounded-xl h-40 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer ${backCaptured ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
+              onClick={() => backInputRef.current?.click()}
+              className={`relative rounded-xl h-40 flex flex-col items-center justify-center border-2 border-dashed transition-all cursor-pointer overflow-hidden ${backImage ? 'border-green-500 bg-green-50' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
             >
-              {backCaptured ? (
+              {backImage ? (
                 <>
-                  <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
-                  <span className="text-green-700 font-medium">Back Captured</span>
+                  <img src={backImage} alt="Back of check" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+                  <div className="relative z-10 flex flex-col items-center">
+                    <CheckCircle2 className="w-10 h-10 text-green-700 mb-2 drop-shadow-md" />
+                    <span className="text-green-800 font-bold drop-shadow-md">Back Captured</span>
+                    <span className="text-green-700 text-xs mt-1 underline">Tap to retake</span>
+                  </div>
                 </>
               ) : (
                 <>
@@ -179,8 +257,8 @@ export default function CheckingAccount() {
 
             <button 
               onClick={handleDeposit}
-              disabled={!frontCaptured || !backCaptured}
-              className={`w-full font-semibold py-4 rounded-xl mt-4 transition-colors ${frontCaptured && backCaptured ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+              disabled={!frontImage || !backImage}
+              className={`w-full font-semibold py-4 rounded-xl mt-4 transition-colors ${frontImage && backImage ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
               Submit Deposit
             </button>
@@ -217,6 +295,8 @@ export default function CheckingAccount() {
     }
   };
 
+  if (!account) return <div className="p-8 text-center">Checking account not found.</div>;
+
   return (
     <div className="w-full h-full min-h-screen bg-[#f4f5f9] text-gray-900 pb-24 font-sans flex flex-col relative">
       {/* Header */}
@@ -232,7 +312,7 @@ export default function CheckingAccount() {
           <div className="w-10"></div>
         </div>
         <div className="text-center">
-          <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance)}</p>
+          <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance || 0)}</p>
           <p className="text-sm text-blue-100 font-medium">Available balance</p>
         </div>
       </div>
@@ -255,7 +335,7 @@ export default function CheckingAccount() {
             <div>
               <p className="text-xs text-gray-500 mb-1">Routing Number</p>
               <p className="text-sm font-medium text-gray-900 font-mono tracking-wider">
-                {showNumbers ? account.routing : `••••${account.routing.slice(-5)}`}
+                {showNumbers ? account.routing : `••••${(account.routing || '0000').toString().slice(-5)}`}
               </p>
             </div>
             <div>
@@ -298,7 +378,7 @@ export default function CheckingAccount() {
           </button>
         </div>
 
-        {/* Transactions List */}
+        {/* Transactions List linked directly to DB */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="p-4 border-b border-gray-100">
             <div className="relative">
@@ -320,7 +400,7 @@ export default function CheckingAccount() {
                   <Search className="w-6 h-6 text-gray-300" />
                 </div>
                 <p className="text-gray-500 text-sm font-medium">No transactions found</p>
-                <p className="text-gray-400 text-xs mt-1">Try adjusting your search terms.</p>
+                <p className="text-gray-400 text-xs mt-1">Try adjusting your search terms or transfer funds to get started.</p>
               </div>
             ) : (
               filteredTransactions.map((tx) => (
@@ -359,7 +439,7 @@ export default function CheckingAccount() {
                         <p><span className="font-medium text-gray-500">Method:</span> Electronic</p>
                       </div>
                       <div className="space-y-1 text-right">
-                        <p><span className="font-medium text-gray-500">ID:</span> {Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+                        <p><span className="font-medium text-gray-500">ID:</span> {tx.id.toString().toUpperCase().substring(0, 12)}</p>
                         <button className="text-[#0b5cba] font-medium hover:underline mt-1 inline-block">Report Issue</button>
                       </div>
                     </div>

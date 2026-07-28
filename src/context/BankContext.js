@@ -8,7 +8,7 @@ const BankContext = createContext();
 export function BankProvider({ children }) {
   const [db, setDb] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false); // NEW: Hydration safeguard
+  const [isMounted, setIsMounted] = useState(false); 
   
   const pathname = usePathname();
 
@@ -23,9 +23,8 @@ export function BankProvider({ children }) {
   };
 
   useEffect(() => {
-    setIsMounted(true); // Tells React the client has successfully hydrated
+    setIsMounted(true); 
 
-    // If we are on the login page, don't fetch secure data
     if (pathname === "/") {
       setIsLoading(false);
       return;
@@ -33,10 +32,19 @@ export function BankProvider({ children }) {
 
     async function fetchDatabase() {
       try {
-        const response = await fetch("/api/user");
+        // ENTERPRISE FIX: Cache-Busting. 
+        // We append a timestamp so Next.js treats every fetch as a brand new request.
+        const response = await fetch(`/api/user?t=${Date.now()}`, {
+          cache: 'no-store', // Forces Next.js to bypass the server cache
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        
         const liveData = await response.json();
 
-        // ENTERPRISE SECURITY: Hard-redirect to clear cache and bypass router errors
         if (response.status === 401 || liveData.error === "Unauthorized") {
           window.location.href = "/"; 
           return;
@@ -81,15 +89,12 @@ export function BankProvider({ children }) {
   const formatMoney = (amount) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
-  // NEW: executeTransfer function
   const executeTransfer = async (fromAccountKey, toAccountKey, amountString) => {
     const amount = parseFloat(amountString);
     if (isNaN(amount) || amount <= 0) return;
 
-    // 1. Snapshot the current database state so we can revert if needed
     const dbSnapshot = JSON.parse(JSON.stringify(db));
 
-    // 2. Optimistic UI Update (Instantly update React state)
     setDb((prevDb) => {
       if (!prevDb) return prevDb;
       const newDb = JSON.parse(JSON.stringify(prevDb));
@@ -114,7 +119,6 @@ export function BankProvider({ children }) {
       return newDb;
     });
 
-    // 3. Send the transfer to the database
     try {
       const response = await fetch('/api/transfer', {
         method: 'POST',
@@ -135,26 +139,19 @@ export function BankProvider({ children }) {
           console.error(`Backend failed with status: ${response.status}`);
         }
         
-        // Use our snapshot to perfectly revert the UI
         setDb(dbSnapshot); 
         return;
       }
     } catch (error) {
       console.error("Network error while saving transfer:", error);
-      setDb(dbSnapshot); // Revert on network failure too
+      setDb(dbSnapshot); 
     }
   };
 
-  // HYDRATION FIX: Do not render the Context until the browser and server are perfectly synced
   if (!isMounted) return null;
 
   return (
-    // Export executeTransfer to the rest of the application
     <BankContext.Provider value={{ db, formatMoney, executeTransfer }}>
-      {/* 
-        Instead of destroying the layout.js HTML, we render it safely via {children}.
-        If the app is loading secure data, we render an overlay spinner ON TOP of the layout.
-      */}
       {pathname !== "/" && (isLoading || !db) ? (
         <>
           {children}
