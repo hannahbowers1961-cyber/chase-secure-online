@@ -1,29 +1,22 @@
 import { NextResponse } from "next/server";
-import { jwtVerify } from "jose";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 
-// FIX 1: Completely disable Next.js server-side caching for this endpoint
+// Completely disable Next.js server-side caching for this endpoint
 export const dynamic = 'force-dynamic';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-const JWT_SECRET = new TextEncoder().encode("super-secret-bank-key-2026");
 
 export async function GET(req) {
   try {
-    // 1. Intercept the request and check for the security cookie
-    const token = req.cookies.get("bank_session")?.value;
+    // 1. Await the cookie store and look for the exact cookie name we set in verify
+    const cookieStore = await cookies();
+    const token = cookieStore.get("session_token")?.value;
+    
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // 2. Verify the JWT and extract the exact User ID
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const userId = payload.userId;
+    // 2. The token we set in the verify route IS the raw user.id, so no JWT decoding is needed
+    const userId = token;
 
-    // 3. Fetch ONLY this specific user's data from PostgreSQL
+    // 3. Fetch ONLY this specific user's data from PostgreSQL using your singleton
     const userData = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -35,7 +28,7 @@ export async function GET(req) {
 
     if (!userData) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // FIX 2: Trust the database balance column! Do not overwrite it with transaction math.
+    // Trust the database balance column! Do not overwrite it with transaction math.
     const snapshotAmount = userData.accounts
       .filter(a => a.type === 'DEPOSITORY') // Typically Checking/Savings
       .reduce((sum, a) => sum + (a.balance || 0), 0);
@@ -45,11 +38,11 @@ export async function GET(req) {
 
     return NextResponse.json({
       ...safeUserData,
-      accounts: userData.accounts, // Pass accounts exactly as they are in the database
+      accounts: userData.accounts, 
       snapshotAmount
     });
   } catch (error) {
-    console.error("Database or JWT Error:", error);
+    console.error("Database Error:", error);
     return NextResponse.json({ error: "Unauthorized or Failed to fetch" }, { status: 401 });
   }
 }

@@ -1,48 +1,64 @@
 import { NextResponse } from "next/server";
-import { SignJWT } from "jose";
-import bcrypt from "bcryptjs";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-// In production, this would be inside your .env file
-const JWT_SECRET = new TextEncoder().encode("super-secret-bank-key-2026");
+import { prisma } from "@/lib/prisma";
+import nodemailer from "nodemailer";
+import { cookies } from "next/headers";
 
 export async function POST(req) {
   try {
     const { username, password } = await req.json();
-
-    // 1. Find the user in the database
     const user = await prisma.user.findUnique({ where: { username } });
+
     if (!user) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
 
-    // 2. Cryptographically verify the password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    // --- NO MORE HASHING: Direct plain-text comparison ---
+    if (user.password !== password) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+    // -----------------------------------------------------
 
-    // 3. Generate a secure JWT Token
-    const token = await new SignJWT({ userId: user.id })
-      .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("2h")
-      .sign(JWT_SECRET);
+    if (!user.email) return NextResponse.json({ error: "No email registered for this account" }, { status: 400 });
 
-    // 4. Attach token as an HttpOnly cookie
-    const response = NextResponse.json({ success: true });
-    response.cookies.set("bank_session", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 2, // 2 hours
+    // 1. Check for trusted device bypass
+    const cookieStore = await cookies();
+    const trustedDevice = cookieStore.get("trusted_device")?.value;
+
+    if (trustedDevice === user.id) {
+      cookieStore.set("session_token", user.id, {
+        httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 60 * 60 * 24 * 7 
+      });
+      return NextResponse.json({ success: true, requiresOtp: false });
+    }
+
+    // ... The rest of your OTP and nodemailer code stays exactly the same ...
+
+    // 2. Generate OTP if not trusted
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); 
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { otpCode: otp, otpExpiry }
     });
 
-    return response;
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    });
+
+    await transporter.sendMail({
+      from: `"Chase Security" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "Your Chase verification code",
+      text: `Your identification code is: ${otp}. This code will expire in 10 minutes.`,
+      html: `<div style="font-family: Arial, sans-serif; padding: 20px;"><h2 style="color: #0d47a1;">Verify your identity</h2><p>Your temporary identification code is:</p><h1 style="font-size: 32px; letter-spacing: 4px;">${otp}</h1><p>This code will expire in 10 minutes.</p></div>`,
+    });
+
+    const [name, domain] = user.email.split('@');
+    const maskedEmail = `${name[0]}***@${domain}`;
+
+    return NextResponse.json({ success: true, requiresOtp: true, maskedEmail });
   } catch (error) {
-    console.error("Auth Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("Login error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

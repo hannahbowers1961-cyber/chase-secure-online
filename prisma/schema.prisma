@@ -9,14 +9,17 @@ datasource db {
 // --- ENTERPRISE DATABASE TABLES ---
 
 model User {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   username    String    @unique
   password    String
+  email       String?   @unique // Make sure this is here!
+  phoneNumber String?
+  otpCode     String?
+  otpExpiry   DateTime?
   firstName   String
   lastName    String
   creditScore Int
-  
-  accounts    Account[] 
+  accounts    Account[]
 }
 
 model Account {

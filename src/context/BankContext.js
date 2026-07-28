@@ -1,16 +1,15 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const BankContext = createContext();
 
 export function BankProvider({ children }) {
   const [db, setDb] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false); 
-  
   const pathname = usePathname();
+  const router = useRouter();
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -23,8 +22,7 @@ export function BankProvider({ children }) {
   };
 
   useEffect(() => {
-    setIsMounted(true); 
-
+    // If we are on the login page, stop loading and do nothing.
     if (pathname === "/") {
       setIsLoading(false);
       return;
@@ -32,10 +30,8 @@ export function BankProvider({ children }) {
 
     async function fetchDatabase() {
       try {
-        // ENTERPRISE FIX: Cache-Busting. 
-        // We append a timestamp so Next.js treats every fetch as a brand new request.
         const response = await fetch(`/api/user?t=${Date.now()}`, {
-          cache: 'no-store', // Forces Next.js to bypass the server cache
+          cache: 'no-store',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
@@ -45,14 +41,9 @@ export function BankProvider({ children }) {
         
         const liveData = await response.json();
 
-        if (response.status === 401 || liveData.error === "Unauthorized") {
-          window.location.href = "/"; 
-          return;
-        }
-
-        if (!response.ok || !liveData.accounts) {
-          console.error("API Error:", liveData?.error || "Missing accounts data");
-          setIsLoading(false);
+        // If unauthorized or missing data, push back to login
+        if (response.status === 401 || liveData.error === "Unauthorized" || !liveData.accounts) {
+          router.push("/"); 
           return;
         }
 
@@ -78,13 +69,14 @@ export function BankProvider({ children }) {
         });
       } catch (error) { 
         console.error("Network Error:", error); 
+        router.push("/");
       } finally { 
         setIsLoading(false); 
       }
     }
     
     fetchDatabase();
-  }, [pathname]);
+  }, [pathname, router]);
 
   const formatMoney = (amount) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -123,44 +115,31 @@ export function BankProvider({ children }) {
       const response = await fetch('/api/transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fromAccountKey,
-          toAccountKey,
-          amount
-        })
+        body: JSON.stringify({ fromAccountKey, toAccountKey, amount })
       });
 
       if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await response.json();
-          console.error("Backend rejected transfer:", errorData.error);
-        } else {
-          console.error(`Backend failed with status: ${response.status}`);
-        }
-        
         setDb(dbSnapshot); 
-        return;
       }
     } catch (error) {
-      console.error("Network error while saving transfer:", error);
       setDb(dbSnapshot); 
     }
   };
 
-  if (!isMounted) return null;
+  const executeCashAdvance = async (fromAccountKey, toAccountKey, amountString) => {
+    return executeTransfer(fromAccountKey, toAccountKey, amountString);
+  };
 
+  // HYDRATION FIX: We NEVER block {children}. We render it 100% of the time.
+  // The loading spinner now safely floats *over* the UI instead of replacing it.
   return (
-    <BankContext.Provider value={{ db, formatMoney, executeTransfer }}>
-      {pathname !== "/" && (isLoading || !db) ? (
-        <>
-          {children}
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#f4f5f9]">
-            <div className="w-8 h-8 border-4 border-[#0b5cba] border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        </>
-      ) : (
-        children
+    <BankContext.Provider value={{ db, formatMoney, executeTransfer, executeCashAdvance }}>
+      {children}
+      
+      {pathname !== "/" && isLoading && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#f4f5f9]">
+          <div className="w-8 h-8 border-4 border-[#0b5cba] border-t-transparent rounded-full animate-spin"></div>
+        </div>
       )}
     </BankContext.Provider>
   );

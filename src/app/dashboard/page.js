@@ -1,5 +1,6 @@
 "use client";
 
+import SessionTimeout from "@/components/SessionTimeout";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -78,7 +79,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full h-full bg-[#f4f5f9] overflow-y-auto pb-24 font-sans relative">
-      
+      <SessionTimeout />
       {/* Top App Bar */}
       <div className="flex items-center justify-between px-4 py-3 bg-[#f4f5f9] sticky top-0 z-20">
         <div className="flex gap-4">

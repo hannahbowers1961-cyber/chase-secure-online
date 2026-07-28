@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { useBank } from "@/context/BankContext";
 import { 
   ArrowLeft, DollarSign, Gift, Lock, Unlock, FileText, 
-  X, ChevronDown, ChevronUp, Search, Building2, Banknote, 
-  CheckCircle2, Loader2, AlertCircle, DownloadCloud 
+  CheckCircle2, X, ChevronDown, ChevronUp, Search, 
+  Building2, Banknote, Loader2, AlertCircle, DownloadCloud 
 } from "lucide-react";
 
-export default function CreditCardDetails() {
+export default function FreedomCard() {
   const router = useRouter();
   
-  // Note: executeTransfer is added as a fallback in case executeCashAdvance isn't fully built yet
   const { db, formatMoney, executeCashAdvance, executeTransfer } = useBank();
   
   // Base UI State
@@ -31,15 +30,13 @@ export default function CreditCardDetails() {
   // Safe fallback while DB is loading
   if (!db) return null;
 
-  // STRICT DB BINDING: Use live data only
-  const account = db.accounts.freedomUnlimited;
+  // STRICT DB BINDING
+  const account = db.accounts.freedom;
   const targetAccount = db.accounts.checking || { name: "Checking", mask: "0000" };
   const liveTransactions = account?.transactions || [];
   
-  // Defaulting to a $10,000 limit if not set in DB for the Unlimited card
-  const creditLimit = account?.creditLimit || 10000;
+  const creditLimit = account?.creditLimit || 5000;
   const availableCredit = creditLimit - (account?.balance || 0);
-  const paymentDue = account?.paymentDue || 0; // Fallback to 0 if not in schema yet
 
   // Filter dynamic transactions based on search query
   const filteredTransactions = liveTransactions.filter(tx => 
@@ -48,7 +45,6 @@ export default function CreditCardDetails() {
   );
 
   const handleCashAdvance = async () => {
-    // 1. FRONTEND VALIDATION
     const amountToTransfer = parseFloat(transferAmount);
     
     if (amountToTransfer > availableCredit) {
@@ -59,11 +55,10 @@ export default function CreditCardDetails() {
     setActionError("");
     setIsProcessing(true);
 
-    // 2. Execute Action
     if (executeCashAdvance) {
-      await executeCashAdvance("freedomUnlimited", "checking", transferAmount);
+      await executeCashAdvance("freedom", "checking", transferAmount);
     } else if (executeTransfer) {
-      await executeTransfer("freedomUnlimited", "checking", transferAmount);
+      await executeTransfer("freedom", "checking", transferAmount);
     }
     
     setTimeout(() => {
@@ -145,7 +140,6 @@ export default function CreditCardDetails() {
               </div>
             </div>
             
-            {/* Error Alert */}
             {actionError && (
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
                 <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -177,46 +171,21 @@ export default function CreditCardDetails() {
       case "Pay Card":
         return (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center cursor-pointer">
+            <div className="bg-green-50 text-green-800 p-4 rounded-xl border border-green-200 flex items-start gap-3 mb-6">
+              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Pay From</p>
-                <span className="font-semibold text-gray-900">{targetAccount.name} (...{targetAccount.mask})</span>
-                <p className="text-sm text-gray-500 mt-1">Avail: {formatMoney(targetAccount.balance)}</p>
+                <p className="font-semibold">No payment required</p>
+                <p className="text-sm mt-1">Your balance is {formatMoney(account?.balance || 0)}. You're all caught up.</p>
               </div>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
             </div>
-            <div className="space-y-2">
-              <p className="text-xs text-gray-500 font-semibold uppercase px-1">Payment Amount</p>
-              
-              <label className="flex justify-between items-center bg-white border border-[#0b5cba] ring-1 ring-[#0b5cba] rounded-xl p-4 cursor-pointer">
-                <div>
-                  <span className="font-semibold text-gray-900 block">Statement Balance</span>
-                  <span className="text-sm text-gray-500">As of Jun 20</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-gray-900">{formatMoney(paymentDue)}</span>
-                  <div className="w-5 h-5 rounded-full border-4 border-[#0b5cba]"></div>
-                </div>
-              </label>
-              
-              <label className="flex justify-between items-center bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                <span className="font-semibold text-gray-900">Current Balance</span>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-gray-900">{formatMoney(account?.balance || 0)}</span>
-                  <div className="w-5 h-5 rounded-full border border-gray-300"></div>
-                </div>
-              </label>
-            </div>
-            <button onClick={resetModalState} className="w-full bg-[#0b5cba] text-white font-semibold py-4 rounded-xl mt-4 hover:bg-[#094a96] transition-colors">
-              Review Payment
-            </button>
+            <button onClick={resetModalState} className="w-full bg-gray-200 text-gray-500 font-semibold py-4 rounded-xl mt-4 cursor-not-allowed" disabled>Review Payment</button>
           </div>
         );
       case "Rewards Hub":
         return (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="text-center py-4">
-              <p className="text-5xl font-light text-[#0b5cba] tracking-tight">142,500</p>
+              <p className="text-5xl font-light text-[#0b5cba] tracking-tight">12,400</p>
               <p className="text-gray-500 font-medium mt-2">Available Points</p>
             </div>
           </div>
@@ -224,7 +193,7 @@ export default function CreditCardDetails() {
       case "Statements":
         return (
           <div className="divide-y divide-gray-100 -mx-6 px-6 animate-in fade-in duration-200">
-            {['June 2026', 'May 2026', 'April 2026'].map((month, i) => (
+            {['June 2026', 'May 2026', 'April 2026', 'March 2026'].map((month, i) => (
               <div 
                 key={i} 
                 onClick={() => handleDownload(month)}
@@ -252,7 +221,7 @@ export default function CreditCardDetails() {
     }
   };
 
-  // Prevent rendering if account doesn't exist in the database
+  // Prevent rendering if account doesn't exist
   if (!account) return <div className="p-8 text-center">Credit Card not found.</div>;
 
   return (
@@ -299,7 +268,6 @@ export default function CreditCardDetails() {
           </button>
         </div>
 
-        {/* Transactions List linked directly to DB */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="p-4 border-b border-gray-100">
             <div className="relative">
@@ -358,7 +326,7 @@ export default function CreditCardDetails() {
                         <p><span className="font-medium text-gray-500">Method:</span> Electronic</p>
                       </div>
                       <div className="space-y-1 text-right">
-                        <p><span className="font-medium text-gray-500">ID:</span> {tx.id.toString().toUpperCase().substring(0, 12)}</p>
+                        <p><span className="font-medium text-gray-500">ID:</span> {tx.id ? tx.id.toString().toUpperCase().substring(0, 12) : "TX-PENDING"}</p>
                         <button className="text-[#0b5cba] font-medium hover:underline mt-1 inline-block">Report Issue</button>
                       </div>
                     </div>
