@@ -2,14 +2,26 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { ShieldCheck } from "lucide-react"; // Imported for the premium spinner
 
 const BankContext = createContext();
 
 export function BankProvider({ children }) {
   const [db, setDb] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  
   const pathname = usePathname();
   const router = useRouter();
+  
+  // 👉 THE FIX: Track the previous path to catch navigations instantly
+  const [lastPath, setLastPath] = useState(pathname);
+
+  // By doing this OUTSIDE of a useEffect, we force React to instantly 
+  // show the loading spinner before it even tries to paint the new page.
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
+    setIsLoading(true);
+  }
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -22,7 +34,6 @@ export function BankProvider({ children }) {
   };
 
   useEffect(() => {
-    // If we are on the login page, stop loading and do nothing.
     if (pathname === "/") {
       setIsLoading(false);
       return;
@@ -41,11 +52,13 @@ export function BankProvider({ children }) {
         
         const liveData = await response.json();
 
-        // If unauthorized or missing data, push back to login
         if (response.status === 401 || liveData.error === "Unauthorized" || !liveData.accounts) {
           router.push("/"); 
           return;
         }
+
+        // Artificial Bank Security Delay (1.2 seconds)
+        await new Promise((resolve) => setTimeout(resolve, 1200));
 
         const formattedAccounts = {};
         liveData.accounts.forEach(acc => {
@@ -76,7 +89,7 @@ export function BankProvider({ children }) {
     }
     
     fetchDatabase();
-  }, [pathname, router]);
+  }, [pathname, router]); // Triggered every time pathname changes
 
   const formatMoney = (amount) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -112,6 +125,9 @@ export function BankProvider({ children }) {
     });
 
     try {
+      // Artificial Transfer Security Delay (2 seconds)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       const response = await fetch('/api/transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,15 +146,25 @@ export function BankProvider({ children }) {
     return executeTransfer(fromAccountKey, toAccountKey, amountString);
   };
 
-  // HYDRATION FIX: We NEVER block {children}. We render it 100% of the time.
-  // The loading spinner now safely floats *over* the UI instead of replacing it.
   return (
     <BankContext.Provider value={{ db, formatMoney, executeTransfer, executeCashAdvance }}>
       {children}
       
+      {/* 
+        PREMIUM LOADING OVERLAY
+        This strictly blocks the screen while the context is fetching data 
+      */}
       {pathname !== "/" && isLoading && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#f4f5f9]">
-          <div className="w-8 h-8 border-4 border-[#0b5cba] border-t-transparent rounded-full animate-spin"></div>
+        <div className="fixed inset-0 z-[99999] bg-[#f4f5f9] flex flex-col items-center justify-center">
+          <div className="relative flex items-center justify-center w-20 h-20">
+            <div className="absolute inset-0 w-full h-full border-4 border-gray-200 border-t-[#0b5cba] rounded-full animate-spin"></div>
+            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center z-10 shadow-sm">
+              <ShieldCheck className="w-6 h-6 text-[#0b5cba]" />
+            </div>
+          </div>
+          <p className="text-gray-500 font-semibold mt-6 tracking-widest animate-pulse uppercase text-xs">
+            Securing Connection...
+          </p>
         </div>
       )}
     </BankContext.Provider>
