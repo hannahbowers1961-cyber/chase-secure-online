@@ -19,7 +19,7 @@ export default function Security() {
   
   // Simulated Interactive States
   const [biometricsEnabled, setBiometricsEnabled] = useState(true);
-  const [use2FA, setUse2FA] = useState(true);
+  const [use2FA] = useState(true); // Locked to true, setter removed
   const [privacyToggles, setPrivacyToggles] = useState({ marketing: false, dataSharing: false });
   
   // Card Lock State synced with Database
@@ -67,6 +67,60 @@ export default function Security() {
       alert("Failed to update card lock status.");
     }
   };
+
+  // --- NEW: Current Device State ---
+  const [currentDevice, setCurrentDevice] = useState({
+    name: "Loading...",
+    browser: "Loading...",
+    location: "Detecting location...",
+    isMobile: false
+  });
+
+  // Detect Device Info & Location on Client Side
+  useEffect(() => {
+    // 1. Parse User Agent for Device & Browser
+    const ua = navigator.userAgent;
+    let deviceName = "Unknown Device";
+    let isMobile = false;
+    
+    if (/iPhone/.test(ua)) { deviceName = "iPhone"; isMobile = true; }
+    else if (/iPad/.test(ua)) { deviceName = "iPad"; isMobile = true; }
+    else if (/Android/.test(ua)) { deviceName = "Android Device"; isMobile = true; }
+    else if (/Windows/.test(ua)) { deviceName = "Windows PC"; }
+    else if (/Macintosh/.test(ua)) { deviceName = "Mac"; }
+
+    let browserName = "Unknown Browser";
+    if (/Chrome/.test(ua)) browserName = "Chrome";
+    else if (/Safari/.test(ua) && !/Chrome/.test(ua)) browserName = "Safari";
+    else if (/Firefox/.test(ua)) browserName = "Firefox";
+
+    // 2. Fetch Location silently via IP
+    const fetchLocation = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        const locString = data.city && data.region_code 
+          ? `${data.city}, ${data.region_code}` 
+          : "Unknown Location";
+        
+        setCurrentDevice({
+          name: deviceName,
+          browser: browserName,
+          location: locString,
+          isMobile: isMobile
+        });
+      } catch (error) {
+        setCurrentDevice({
+          name: deviceName,
+          browser: browserName,
+          location: "Location unavailable",
+          isMobile: isMobile
+        });
+      }
+    };
+
+    fetchLocation();
+  }, []);
 
   const renderModalContent = () => {
     switch (activeAction) {
@@ -240,15 +294,25 @@ export default function Security() {
             <div className="bg-white border border-gray-200 rounded-xl p-4 flex justify-between items-center shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#eef4fb] rounded-full flex items-center justify-center">
-                  <Smartphone className="w-5 h-5 text-[#0b5cba]" />
+                  {/* Dynamically show mobile or desktop icon */}
+                  {currentDevice.isMobile ? (
+                    <Smartphone className="w-5 h-5 text-[#0b5cba]" />
+                  ) : (
+                    <MonitorSmartphone className="w-5 h-5 text-[#0b5cba]" />
+                  )}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">This Device</p>
-                  <p className="text-xs text-green-600 font-medium">Active Now • New York, NY</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {currentDevice.name} ({currentDevice.browser})
+                  </p>
+                  <p className="text-xs text-green-600 font-medium">
+                    Active Now • {currentDevice.location}
+                  </p>
                 </div>
               </div>
             </div>
 
+            {/* Simulated "Other Device" to make the UI look populated */}
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4">Other Devices</p>
             <div className="bg-white border border-gray-200 rounded-xl p-4 flex justify-between items-center shadow-sm">
               <div className="flex items-center gap-3">
