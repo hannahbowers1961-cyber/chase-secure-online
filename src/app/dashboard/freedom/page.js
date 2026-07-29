@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useBank } from "@/context/BankContext";
+import { toggleCardLockInDB } from "@/app/actions";
 import { 
   ArrowLeft, DollarSign, Gift, Lock, Unlock, FileText, 
   CheckCircle2, X, ChevronDown, ChevronUp, Search, 
-  Building2, Banknote, Loader2, AlertCircle 
+  Building2, Banknote, Loader2, AlertCircle, DownloadCloud 
 } from "lucide-react";
 
-export default function FreedomCard() {
+export default function FreedomUnlimitedCard() {
   const router = useRouter();
   
-  // Note: executeTransfer is added as a fallback in case executeCashAdvance isn't fully built yet
   const { db, formatMoney, executeCashAdvance, executeTransfer } = useBank();
   
   // Base UI State
@@ -28,26 +28,55 @@ export default function FreedomCard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [downloading, setDownloading] = useState(null);
 
+  // 1. STRICT DB BINDING: Notice we pull "freedomUnlimited" here!
+  const account = db?.accounts?.freedomUnlimited;
+  
+  // Sync lock state with the database on load
+  useEffect(() => {
+    if (account && account.isLocked !== undefined) {
+      setIsLocked(account.isLocked);
+    }
+  }, [account]);
+
   // Safe fallback while DB is loading
   if (!db) return null;
 
-  // STRICT DB BINDING: Use live data only
-  const account = db.accounts.freedom;
   const targetAccount = db.accounts.checking || { name: "Checking", mask: "0000" };
   const liveTransactions = account?.transactions || [];
   
-  // Credit cards usually have a limit. We'll default to 5000 if not set in DB
-  const creditLimit = account?.creditLimit || 5000;
-  const availableCredit = creditLimit - (account?.balance || 0);
+  // 100% DATABASE-DRIVEN CREDIT MATH
+  const creditLimit = account?.creditLimit || 0;
+  const availableCredit = account?.availableCredit !== undefined 
+    ? account.availableCredit 
+    : (creditLimit - (account?.balance || 0));
 
-  // Filter dynamic transactions based on search query
+  // Rewards math (Adjusted slightly so it looks different from your other card)
+  const rewardsMiles = 54250.00; 
+  const rewardsValue = rewardsMiles * 0.01;
+
+  // Filter dynamic transactions
   const filteredTransactions = liveTransactions.filter(tx => 
     (tx.desc && tx.desc.toLowerCase().includes(searchQuery.toLowerCase())) || 
     (tx.cat && tx.cat.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const handleToggleLock = async () => {
+    const newState = !isLocked;
+    
+    // 1. Instantly update the UI so it feels lightning fast to the user
+    setIsLocked(newState);
+    
+    // 2. Secretly update the database in the background so it survives reloads!
+    const response = await toggleCardLockInDB(account.id, newState);
+    
+    // 3. If the database update fails for some reason, revert the UI back
+    if (!response.success) {
+      setIsLocked(!newState); 
+      alert("Failed to lock/unlock card. Please try again.");
+    }
+  };
+
   const handleCashAdvance = async () => {
-    // 1. FRONTEND VALIDATION
     const amountToTransfer = parseFloat(transferAmount);
     
     if (amountToTransfer > availableCredit) {
@@ -58,11 +87,11 @@ export default function FreedomCard() {
     setActionError("");
     setIsProcessing(true);
 
-    // 2. Execute Action (Using your custom function or falling back to transfer)
+    // 2. Execute Action: Notice we pass "freedomUnlimited" to the transfer function
     if (executeCashAdvance) {
-      await executeCashAdvance("freedom", "checking", transferAmount);
+      await executeCashAdvance("freedomUnlimited", "checking", transferAmount);
     } else if (executeTransfer) {
-      await executeTransfer("freedom", "checking", transferAmount);
+      await executeTransfer("freedomUnlimited", "checking", transferAmount);
     }
     
     setTimeout(() => {
@@ -114,7 +143,7 @@ export default function FreedomCard() {
               <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Advance From</p>
               <div className="flex justify-between items-center">
                 <span className="font-semibold text-gray-900">{account?.name} (...{account?.mask})</span>
-                <span className="text-sm text-gray-500">Avail: {formatMoney(availableCredit)}</span>
+                <span className="text-sm font-bold text-[#0b5cba]">Avail: {formatMoney(availableCredit)}</span>
               </div>
             </div>
             
@@ -144,7 +173,6 @@ export default function FreedomCard() {
               </div>
             </div>
             
-            {/* Error Alert */}
             {actionError && (
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
                 <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -188,10 +216,34 @@ export default function FreedomCard() {
         );
       case "Rewards Hub":
         return (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="text-center py-4">
-              <p className="text-5xl font-light text-[#0b5cba] tracking-tight">12,400</p>
-              <p className="text-gray-500 font-medium mt-2">Available Points</p>
+          <div className="space-y-8 animate-in fade-in duration-200 -mx-2">
+            <div className="text-center pt-2 pb-6 border-b border-gray-100 flex flex-col items-center">
+              <div className="w-[72px] h-[72px] bg-[#fdf5d3] rounded-full flex items-center justify-center mb-5 shadow-sm">
+                <span className="text-3xl">🏆</span>
+              </div>
+              <h2 className="text-[22px] font-bold text-[#1f2937] mb-2 tracking-tight">Your Rewards Balance</h2>
+              <div className="flex items-baseline justify-center gap-2 mb-2">
+                <span className="text-[52px] font-bold text-[#0275d8] tracking-tighter">
+                  {rewardsMiles.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </span>
+                <span className="text-xl font-bold text-gray-500">Points</span>
+              </div>
+              <p className="text-[15px] font-bold text-[#0ca962]">
+                ≈ {formatMoney(rewardsValue)} in Travel Value
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 px-2">
+              <button className="flex flex-col items-center justify-center p-6 bg-[#f8f9fa] border border-gray-100 rounded-[20px] hover:bg-gray-100 hover:shadow-sm transition-all text-center">
+                <span className="text-3xl mb-3">✈️</span>
+                <span className="font-bold text-gray-900 text-[15px]">Book Travel</span>
+                <span className="text-[12px] text-gray-500 mt-1 leading-tight">Flights, hotels, & car rentals</span>
+              </button>
+              <button className="flex flex-col items-center justify-center p-6 bg-[#f8f9fa] border border-gray-100 rounded-[20px] hover:bg-gray-100 hover:shadow-sm transition-all text-center">
+                <span className="text-3xl mb-3">💵</span>
+                <span className="font-bold text-gray-900 text-[15px]">Redeem for Cash</span>
+                <span className="text-[12px] text-gray-500 mt-1 leading-tight">Get a statement credit</span>
+              </button>
             </div>
           </div>
         );
@@ -226,12 +278,12 @@ export default function FreedomCard() {
     }
   };
 
-  // Prevent rendering if account doesn't exist in the database
-  if (!account) return <div className="p-8 text-center">Credit Card not found.</div>;
+  if (!account) return <div className="p-8 text-center">Freedom Unlimited Card not found.</div>;
 
   return (
     <div className="w-full h-full bg-[#f4f5f9] text-gray-900 overflow-y-auto pb-24 font-sans flex flex-col relative">
-      <div className={`pt-6 pb-4 px-4 sticky top-0 z-10 shadow-sm transition-colors duration-300 ${isLocked ? 'bg-gray-800' : 'bg-[#0b5cba]'} text-white`}>
+      
+      <div className={`pt-6 pb-6 px-4 sticky top-0 z-10 shadow-sm transition-colors duration-300 ${isLocked ? 'bg-gray-800' : 'bg-[#0b5cba]'} text-white`}>
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6 text-white" />
@@ -239,16 +291,21 @@ export default function FreedomCard() {
           <span className="font-semibold text-lg uppercase">{account.name}</span>
           <div className="w-10"></div>
         </div>
+        
         <div className="text-center pb-2">
           {isLocked && <div className="text-xs bg-red-500 text-white font-bold px-2 py-1 rounded inline-block mb-2 uppercase tracking-widest animate-pulse">Card Locked</div>}
           <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance || 0)}</p>
           <p className="text-sm text-blue-100">Current balance</p>
         </div>
+
+        <div className={`mt-4 pt-4 border-t flex justify-between items-center ${isLocked ? 'border-gray-600' : 'border-blue-400/40'}`}>
+          <span className="text-sm font-medium text-blue-100">Available credit</span>
+          <span className="text-base font-bold text-white tracking-wide">{formatMoney(availableCredit)}</span>
+        </div>
       </div>
 
-      <div className="px-4 space-y-4 -mt-2 relative z-20">
+      <div className="px-4 space-y-4 pt-4 relative z-20">
         
-        {/* Updated Grid for 5 Items */}
         <div className="grid grid-cols-5 gap-1.5">
           <button onClick={() => setActiveAction("Pay Card")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
             <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><DollarSign className="w-4 h-4 text-[#0b5cba]" /></div>
@@ -266,7 +323,7 @@ export default function FreedomCard() {
             <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><FileText className="w-4 h-4 text-[#0b5cba]" /></div>
             <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Docs</span>
           </button>
-          <button onClick={() => setIsLocked(!isLocked)} className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
+          <button onClick={handleToggleLock} className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
             <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isLocked ? 'bg-red-100' : 'bg-[#eef4fb]'}`}>
               {isLocked ? <Unlock className="w-4 h-4 text-red-600" /> : <Lock className="w-4 h-4 text-[#0b5cba]" />}
             </div>
@@ -274,7 +331,6 @@ export default function FreedomCard() {
           </button>
         </div>
 
-        {/* Transactions List linked directly to DB */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="p-4 border-b border-gray-100">
             <div className="relative">
@@ -333,7 +389,7 @@ export default function FreedomCard() {
                         <p><span className="font-medium text-gray-500">Method:</span> Electronic</p>
                       </div>
                       <div className="space-y-1 text-right">
-                        <p><span className="font-medium text-gray-500">ID:</span> {tx.id.toString().toUpperCase().substring(0, 12)}</p>
+                        <p><span className="font-medium text-gray-500">ID:</span> {tx.id ? tx.id.toString().toUpperCase().substring(0, 12) : "TX-PENDING"}</p>
                         <button className="text-[#0b5cba] font-medium hover:underline mt-1 inline-block">Report Issue</button>
                       </div>
                     </div>

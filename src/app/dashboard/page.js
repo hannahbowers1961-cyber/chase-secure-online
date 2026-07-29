@@ -92,7 +92,7 @@ export default function Dashboard() {
         </div>
         <BankLogo className="w-8 h-8 text-[#0b5cba]" />
         
-        <Link href="/dashboard/profile" className="hover:bg-blue-50 p-1 -mr-1 rounded-full transition-colors">
+        <Link href="/profile" className="hover:bg-blue-50 p-1 -mr-1 rounded-full transition-colors">
           <UserCircle className="w-8 h-8 text-[#0b5cba]" />
         </Link>
       </div>

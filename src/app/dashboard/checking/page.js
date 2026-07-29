@@ -298,9 +298,9 @@ export default function CheckingAccount() {
   if (!account) return <div className="p-8 text-center">Checking account not found.</div>;
 
   return (
-    <div className="w-full h-full min-h-screen bg-[#f4f5f9] text-gray-900 pb-24 font-sans flex flex-col relative">
+    <div className="w-full h-full bg-[#f4f5f9] overflow-y-auto text-gray-900 pb-24 font-sans flex flex-col relative">
       {/* Header */}
-      <div className="bg-[#0b5cba] text-white pt-6 pb-8 px-4 sticky top-0 z-10 shadow-sm">
+      <div className="bg-[#0b5cba] text-white pt-6 pb-16 px-4 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <button 
             onClick={() => router.push('/dashboard')} 
@@ -317,7 +317,7 @@ export default function CheckingAccount() {
         </div>
       </div>
 
-      <div className="px-4 space-y-4 -mt-4 relative z-20">
+      <div className="px-4 space-y-4 pt-2 relative z-20">
         
         {/* Account Details Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">

@@ -9,50 +9,87 @@ datasource db {
 // --- ENTERPRISE DATABASE TABLES ---
 
 model User {
-  id          String    @id @default(uuid())
-  username    String    @unique
+  id          String      @id @default(uuid())
+  username    String      @unique
   password    String
-  email       String?   @unique // Make sure this is here!
+  email       String?     @unique
   phoneNumber String?
-  otpCode     String?
-  otpExpiry   DateTime?
+  
+  // Profile & Billing Address
   firstName   String
   lastName    String
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
   creditScore Int
+  
+  // Security / OTP
+  otpCode     String?
+  otpExpiry   DateTime?
+
+  // Relations
   accounts    Account[]
+  recipients  Recipient[] // Saved wire/transfer beneficiaries
 }
 
 model Account {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  accountKey  String    
-  name        String
-  mask        String
-  type        String    // "DEPOSITORY" or "CREDIT"
+  accountKey  String   // e.g., "checking", "savings", "autoLoan", "freedom"
+  name        String   // e.g., "TOTAL CHECKING", "Auto Loan"
+  mask        String   // e.g., "8853"
+  type        String   // "DEPOSITORY", "CREDIT", or "LOAN"
+  balance     Float    @default(0)
   
-  balance     Float     @default(0) // NEW: Added balance field
-  
-  // Depository-specific fields
+  // Depository-specific fields (Checking / Savings)
   routing     String?  
   accountNum  String?  
   
-  // Credit-specific fields
-  creditLimit Float?   
+  // Credit-specific fields (Credit Cards)
+  creditLimit    Float?   
+  minimumPayment Float?   // e.g., 35.00
+  isLocked       Boolean  @default(false)  // <-- ADD THIS LINE
+  
+  // Loan-specific fields (Auto / Mortgage / Personal Loans)
+  nextPaymentDate String?  // e.g., "Oct 24, 2026"
+  paymentAmount   Float?   // e.g., 455.20
+  vehicleDetails  String?  // e.g., "2021 Toyota Camry"
+  interestRate    Float?   // e.g., 5.49 (APR %)
+  termLength      String?  // e.g., "60 Months"
+  originationDate String?  // e.g., "Oct 15, 2021"
   
   transactions Transaction[]
 }
 
 model Transaction {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   accountId   String
-  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   
   date        DateTime 
-  desc        String
-  cat         String
-  amount      Float    
+  desc        String   // e.g., "The Home Depot" or "AutoPay"
+  cat         String   // e.g., "Debit Card" or "Transfer"
+  amount      Float    // Positive for deposit, negative for debit/payment
+  
+  // Extended Metadata for Expanded UI
+  status      String   @default("CLEARED") // "PENDING", "CLEARED", "FAILED"
+  method      String?  // "Electronic", "AutoPay", "Wire Transfer", "Debit Card"
   
   createdAt   DateTime @default(now()) 
+}
+
+model Recipient {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String   // Person or Business Name
+  accountNum  String   // Their account number
+  routing     String   // 9-digit routing or SWIFT code
+  bankName    String?  // e.g., "Bank of America"
+  
+  createdAt   DateTime @default(now())
 }
