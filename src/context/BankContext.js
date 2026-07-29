@@ -73,10 +73,18 @@ export function BankProvider({ children }) {
 
         setDb({
           user: {
+            id: liveData.id,
             firstName: liveData.firstName,
             lastName: liveData.lastName,
             creditScore: liveData.creditScore,
             snapshotAmount: liveData.snapshotAmount,
+            email: liveData.email,
+            phoneNumber: liveData.phoneNumber,
+            address: liveData.address,
+            city: liveData.city,
+            state: liveData.state,
+            zipCode: liveData.zipCode,
+            profileImage: liveData.profileImage
           },
           accounts: formattedAccounts
         });

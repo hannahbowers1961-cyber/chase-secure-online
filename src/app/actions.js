@@ -25,3 +25,15 @@ export async function toggleCardLockInDB(accountId, newLockState) {
     return { success: false, error: "Failed to update database" };
   }
 }
+export async function updateProfileImageInDB(userId, base64Image) {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { profileImage: base64Image }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update profile image:", error);
+    return { success: false };
+  }
+}

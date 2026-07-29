@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useBank } from "@/context/BankContext";
+import { updateProfileImageInDB } from "@/app/actions"; // Imports the new server action
 import { 
   User, Shield, Bell, FileText, HelpCircle, LogOut, 
   ChevronRight, X, Mail, Phone, Lock, Fingerprint, 
@@ -18,6 +19,7 @@ export default function Profile() {
   
   // Profile Image State
   const [profileImage, setProfileImage] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   // Security Toggles & Device Info
@@ -47,8 +49,14 @@ export default function Profile() {
     });
   }, []);
 
+  // Set the profile image instantly when the DB loads
+  useEffect(() => {
+    if (db?.user?.profileImage) {
+      setProfileImage(db.user.profileImage);
+    }
+  }, [db?.user]);
+
   // 1. STRICT DATABASE ENFORCEMENT
-  // Wait for the DB to load before rendering anything to prevent showing fake data
   if (!db || !db.user) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-white pb-24">
@@ -57,18 +65,65 @@ export default function Profile() {
     );
   }
 
-  // 2. LIVE DATABASE BINDING
   const user = db.user;
   const initials = `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase();
 
-  // Handle Image Upload
-  const handleImageUpload = (e) => {
+  // 2. Handle Image Upload & Database Sync
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsUploading(true);
+      
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result);
-        // TODO: In production, upload this Base64 string to your database to sync across devices
+      reader.onloadend = (event) => {
+        const img = new window.Image();
+        img.src = event.target.result;
+        
+        img.onload = async () => {
+          // 1. Create a canvas to resize the image
+          const canvas = document.createElement("canvas");
+          const MAX_SIZE = 256; // Standard profile picture size
+          let width = img.width;
+          let height = img.height;
+
+          // Maintain aspect ratio
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          
+          // 2. Draw and compress the image
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Compress to an optimized JPEG (Quality: 0.7)
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+
+          // 3. Optimistic UI Update (Shows instantly)
+          setProfileImage(compressedBase64); 
+
+          // 4. Safely upload the tiny string to the database
+          if (user.id) {
+            const response = await updateProfileImageInDB(user.id, compressedBase64);
+            if (!response.success) {
+              alert("Failed to sync profile picture to servers.");
+            }
+          } else {
+            console.error("User ID missing from BankContext. Cannot sync image.");
+          }
+          
+          setIsUploading(false);
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -294,18 +349,28 @@ export default function Profile() {
         
         {/* Interactive Avatar */}
         <div 
-          onClick={() => fileInputRef.current?.click()}
-          className="w-16 h-16 rounded-full bg-[#0b5cba] flex items-center justify-center text-white text-2xl font-semibold shadow-sm relative overflow-hidden cursor-pointer group shrink-0"
+          onClick={() => !isUploading && fileInputRef.current?.click()}
+          className={`w-16 h-16 rounded-full bg-[#0b5cba] flex items-center justify-center text-white text-2xl font-semibold shadow-sm relative overflow-hidden group shrink-0 ${isUploading ? 'cursor-wait' : 'cursor-pointer'}`}
         >
           {profileImage ? (
             <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
           ) : (
             initials
           )}
+          
+          {/* Active Upload Spinner */}
+          {isUploading && (
+             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+               <Loader2 className="w-6 h-6 text-white animate-spin" />
+             </div>
+          )}
+
           {/* Hover Overlay for Camera Icon */}
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Camera className="w-6 h-6 text-white" />
-          </div>
+          {!isUploading && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-hidden">
