@@ -163,7 +163,7 @@ export function BankProvider({ children }) {
             </div>
           </div>
           <p className="text-gray-500 font-semibold mt-6 tracking-widest animate-pulse uppercase text-xs">
-            Securing Connection...
+            Secure Connection
           </p>
         </div>
       )}
