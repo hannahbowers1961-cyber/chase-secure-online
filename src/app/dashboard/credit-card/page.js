@@ -285,30 +285,33 @@ export default function FreedomCard() {
   return (
     <div className="w-full h-full bg-[#f4f5f9] text-gray-900 overflow-y-auto pb-24 font-sans flex flex-col relative">
       
-      <div className={`pt-6 pb-6 px-4 sticky top-0 z-10 shadow-sm transition-colors duration-300 ${isLocked ? 'bg-gray-800' : 'bg-[#0b5cba]'} text-white`}>
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors">
+      {/* 1. Unified Sticky Header: Fixed height of 180px */}
+      <div className={`pt-6 pb-4 px-4 sticky top-0 z-30 shadow-md h-[180px] flex flex-col justify-between transition-colors duration-300 ${isLocked ? 'bg-gray-800' : 'bg-[#0b5cba]'} text-white`}>
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0">
             <ArrowLeft className="w-6 h-6 text-white" />
           </button>
-          <span className="font-semibold text-lg uppercase">{account.name}</span>
-          <div className="w-10"></div>
+          <span className="font-semibold text-lg uppercase tracking-wider flex-1 text-center pr-6">{account.name}</span>
         </div>
         
-        <div className="text-center pb-2">
-          {isLocked && <div className="text-xs bg-red-500 text-white font-bold px-2 py-1 rounded inline-block mb-2 uppercase tracking-widest animate-pulse">Card Locked</div>}
-          <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance || 0)}</p>
-          <p className="text-sm text-blue-100">Current balance</p>
+        <div className="text-center pb-1">
+          {isLocked && <div className="text-[10px] bg-red-500 text-white font-bold px-2 py-0.5 rounded inline-block mb-1 uppercase tracking-widest animate-pulse">Card Locked</div>}
+          <p className="text-4xl font-light tracking-tight mb-1 leading-none">{formatMoney(account.balance || 0)}</p>
+          <p className="text-sm text-blue-100 leading-tight">Current balance</p>
         </div>
 
-        <div className={`mt-4 pt-4 border-t flex justify-between items-center ${isLocked ? 'border-gray-600' : 'border-blue-400/40'}`}>
+        <div className={`pt-3 border-t flex justify-between items-center ${isLocked ? 'border-gray-600' : 'border-blue-400/40'}`}>
           <span className="text-sm font-medium text-blue-100">Available credit</span>
           <span className="text-base font-bold text-white tracking-wide">{formatMoney(availableCredit)}</span>
         </div>
       </div>
 
-      <div className="px-4 space-y-4 pt-4 relative z-20">
+      {/* 2. Main Content Area */}
+      <div className="px-4 space-y-4 pt-6 relative z-10 flex flex-col">
         
-        <div className="grid grid-cols-5 gap-1.5">
+        {/* 3. Quick Actions (Becomes Sticky below 180px header!) */}
+        <div className="sticky top-[180px] z-20 bg-[#f4f5f9] pt-2 pb-4 -mx-4 px-4 shrink-0">
+          <div className="grid grid-cols-5 gap-1.5">
           <button onClick={() => setActiveAction("Pay Card")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
             <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><DollarSign className="w-4 h-4 text-[#0b5cba]" /></div>
             <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Pay</span>
@@ -417,6 +420,7 @@ export default function FreedomCard() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

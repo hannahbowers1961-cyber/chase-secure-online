@@ -202,25 +202,22 @@ export default function SavingsAccount() {
 
   return (
     <div className="w-full h-full bg-[#f4f5f9] overflow-y-auto text-gray-900 pb-24 font-sans flex flex-col relative">
-      {/* Header */}
-      <div className="bg-[#0b5cba] text-white pt-6 pb-16 px-4 sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <button 
-            onClick={() => router.push('/dashboard')} 
-            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
-          >
+      {/* 1. Unified Sticky Header: Fixed height of 160px */}
+      <div className="bg-[#0b5cba] text-white pt-6 pb-8 px-4 sticky top-0 z-30 shadow-md h-[160px] flex flex-col justify-between">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0">
             <ArrowLeft className="w-6 h-6 text-white" />
           </button>
-          <span className="font-semibold text-lg uppercase tracking-wider">{account.name}</span>
-          <div className="w-10"></div>
+          <span className="font-semibold text-lg uppercase tracking-wider flex-1 text-center pr-6">{account.name}</span>
         </div>
         <div className="text-center">
-          <p className="text-4xl font-light tracking-tight mb-1">{formatMoney(account.balance || 0)}</p>
-          <p className="text-sm text-blue-100 font-medium">Available balance</p>
+          <p className="text-4xl font-light tracking-tight mb-1 leading-none">{formatMoney(account.balance || 0)}</p>
+          <p className="text-sm text-blue-100 font-medium leading-tight">Available balance</p>
         </div>
       </div>
 
-      <div className="px-4 space-y-4 pt-2 relative z-20">
+      {/* 2. Main Content Area */}
+      <div className="px-4 space-y-4 pt-6 relative z-10 flex flex-col">
         
         {/* Account Details Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -250,8 +247,9 @@ export default function SavingsAccount() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* 3. Quick Actions (Becomes Sticky below header!) */}
+        <div className="sticky top-[160px] z-20 bg-[#f4f5f9] pt-2 pb-4 -mx-4 px-4 shrink-0">
+          <div className="grid grid-cols-2 gap-3">
           <button 
             onClick={() => setActiveAction("Transfer Funds")} 
             className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
@@ -370,6 +368,7 @@ export default function SavingsAccount() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
