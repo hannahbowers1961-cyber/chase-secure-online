@@ -260,7 +260,7 @@ export default function LoginPage() {
       </div>
 
       {/* Footer Area Matching Exact Image */}
-      <div className="bg-white pt-8 pb-12 px-4 border-t border-gray-200 mt-auto">
+      <div className="bg-white py-6 px-4 border-t border-gray-200 mt-auto">
         
         {/* SVGs for Social Icons */}
         <div className="flex justify-center gap-6 mb-6">
