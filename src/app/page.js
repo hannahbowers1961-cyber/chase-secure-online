@@ -103,14 +103,14 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Form Container */}
-      <div className="flex-1 px-4 -mt-[38vh] relative z-10 pb-8 flex justify-center">
+      {/* Form Container - Removed flex-1 to fix scrollbar calculation issues */}
+      <div className="w-full px-4 -mt-[38vh] relative z-10 pb-8 flex justify-center">
         <div className="bg-white rounded-md shadow-xl p-8 w-full max-w-[420px] h-fit">
           
           {step === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-6 animate-in fade-in duration-300">
               
-              {/* Username Input - Styled to match exact image */}
+              {/* Username Input */}
               <div className="relative">
                 <label className={`block text-[15px] font-bold mb-2 ${error ? 'text-[#8f0028]' : 'text-gray-700'}`}>
                   Username
@@ -129,7 +129,7 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Password Input - Styled to match exact image */}
+              {/* Password Input */}
               <div className="relative pt-2">
                 <label className="block text-[15px] text-gray-700 mb-2">
                   Password
