@@ -85,11 +85,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-[#f4f4f4] font-sans">
+    <div className="flex flex-col min-h-[100dvh] w-full bg-[#f4f4f4] font-sans">
       
       {/* Background Image Header Area */}
       <div 
-        className="relative flex-shrink-0 bg-cover bg-center h-[55vh] min-h-[400px]"
+        className="relative flex-shrink-0 bg-cover bg-center h-[55vh] min-h-[300px]"
         style={{ backgroundImage: "url('https://asset.chase.com/content/services/rendition/image.xsmall.jpg/structured-images/geo-images/background/new_york/new_york_night_6.jpg')" }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-transparent"></div>
