@@ -104,7 +104,7 @@ export default function LoginPage() {
       </div>
 
       {/* Form Container - Removed flex-1 to fix scrollbar calculation issues */}
-      <div className="w-full px-4 -mt-[38vh] relative z-10 pb-8 flex justify-center">
+      <div className="w-full px-4 -mt-[38vh] relative z-10 flex justify-center">
         <div className="bg-white rounded-md shadow-xl p-8 w-full max-w-[420px] h-fit">
           
           {step === "login" && (
