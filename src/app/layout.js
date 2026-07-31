@@ -7,8 +7,8 @@ import { BankProvider } from "@/context/BankContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Banking App",
-  description: "Premium banking prototype",
+  title: "Chase Online Banking",
+  description: "Credit card, mortgage, checking, savings, auto financing, investment services, and much more. Visit Chase online or find a branch near you",
 };
 
 export default function RootLayout({ children }) {
