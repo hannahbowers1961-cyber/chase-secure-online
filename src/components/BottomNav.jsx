@@ -18,7 +18,7 @@ export default function BottomNav() {
     "/dashboard/savings",
     "/dashboard/credit-card",
     "/dashboard/freedom",
-    "/dashboard/credit-wise",
+    "/dashboard/creditwise",
     "/dashboard/loans",
     "/transfers/external",
     "/transfers/wire",
