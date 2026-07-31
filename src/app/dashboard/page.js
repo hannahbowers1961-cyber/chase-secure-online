@@ -313,7 +313,7 @@ export default function Dashboard() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search features..." 
-                className="w-full bg-gray-100 border-none rounded-xl py-2.5 pl-10 pr-10 text-[15px] focus:outline-none focus:ring-1 focus:ring-[#0b5cba] transition-all"
+                className="w-full bg-gray-100 border-none rounded-xl py-2.5 pl-10 pr-10 text-[16px] focus:outline-none focus:ring-1 focus:ring-[#0b5cba] transition-all"
               />
               {searchQuery && (
                 <button 
