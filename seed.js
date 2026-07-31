@@ -6,9 +6,6 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-/**
- * Helper function to generate transactions from Jan 1, 2023 to Now
- */
 function generateHistory(accountKey, startDateStr = "2023-01-01") {
   const transactions = [];
   const startDate = new Date(startDateStr);
@@ -23,7 +20,7 @@ function generateHistory(accountKey, startDateStr = "2023-01-01") {
     transactions.push({ date: startDate, desc: "Previous Balance", cat: "System", amount: -1250.00 });
   } else if (accountKey === "autoLoan") {
     transactions.push({ date: startDate, desc: "Initial Loan Amount", cat: "System", amount: -22000.00 });
-    return transactions; // Auto loan doesn't need frequent card transactions
+    return transactions; 
   }
 
   // Transaction templates per account type
@@ -58,13 +55,12 @@ function generateHistory(accountKey, startDateStr = "2023-01-01") {
     const year = current.getFullYear();
     const month = current.getMonth();
 
-    // Generate 3 to 6 random transactions per month
     const count = Math.floor(Math.random() * 4) + 3;
     for (let i = 0; i < count; i++) {
-      const day = Math.floor(Math.random() * 27) + 1; // Pick day 1-28
+      const day = Math.floor(Math.random() * 27) + 1; 
       const txDate = new Date(year, month, day);
 
-      if (txDate > endDate) break; // Don't generate future dates
+      if (txDate > endDate) break; 
 
       const template = poolList[Math.floor(Math.random() * poolList.length)];
       const rawAmount = (Math.random() * (template.max - template.min) + template.min).toFixed(2);
@@ -76,8 +72,6 @@ function generateHistory(accountKey, startDateStr = "2023-01-01") {
         amount: parseFloat(rawAmount)
       });
     }
-
-    // Move to next month
     current.setMonth(current.getMonth() + 1);
   }
 
@@ -90,6 +84,21 @@ async function main() {
   await prisma.transaction.deleteMany();
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
+
+  console.log("Generating transactions and calculating balances...");
+
+  // Generate histories first so we can calculate the exact sum
+  const checkingTx = generateHistory("checking", "2023-01-01");
+  const checkingBal = checkingTx.reduce((sum, t) => sum + t.amount, 0);
+
+  const savingsTx = generateHistory("savings", "2023-01-01");
+  const savingsBal = savingsTx.reduce((sum, t) => sum + t.amount, 0);
+
+  const freedomUnlimTx = generateHistory("freedomUnlimited", "2023-01-01");
+  const freedomUnlimBal = freedomUnlimTx.reduce((sum, t) => sum + t.amount, 0);
+
+  const autoLoanTx = generateHistory("autoLoan", "2023-01-01");
+  const autoLoanBal = autoLoanTx.reduce((sum, t) => sum + t.amount, 0);
 
   console.log("Seeding multi-year enterprise database (2023 - Present)...");
 
@@ -105,38 +114,42 @@ async function main() {
           {
             accountKey: "checking",
             name: "TOTAL CHECKING",
+            balance: checkingBal, // <--- Assign calculated balance
             mask: "8853",
             type: "DEPOSITORY",
             routing: "122105155",
             accountNum: "4490885392",
             transactions: {
-              create: generateHistory("checking", "2023-01-01")
+              create: checkingTx
             }
           },
           {
             accountKey: "savings",
             name: "TOTAL SAVINGS",
+            balance: savingsBal, // <--- Assign calculated balance
             mask: "4421",
             type: "DEPOSITORY",
             routing: "122105155",
             accountNum: "5590114421",
             transactions: {
-              create: generateHistory("savings", "2023-01-01")
+              create: savingsTx
             }
           },
           {
             accountKey: "freedomUnlimited",
             name: "Freedom Unlimited",
+            balance: freedomUnlimBal, // <--- Assign calculated balance
             mask: "1081",
             type: "CREDIT",
             creditLimit: 24000.00,
             transactions: {
-              create: generateHistory("freedomUnlimited", "2023-01-01")
+              create: freedomUnlimTx
             }
           },
           {
             accountKey: "freedom",
             name: "Freedom",
+            balance: 0.00,
             mask: "5445",
             type: "CREDIT",
             creditLimit: 5000.00
@@ -144,10 +157,11 @@ async function main() {
           {
             accountKey: "autoLoan",
             name: "Auto Loan",
+            balance: autoLoanBal, // <--- Assign calculated balance
             mask: "5512",
             type: "CREDIT",
             transactions: {
-              create: generateHistory("autoLoan", "2023-01-01")
+              create: autoLoanTx
             }
           }
         ]

@@ -7,6 +7,6 @@ export default defineConfig({
     url: env("DATABASE_URL"),
   },
   migrations: {
-    seed: "node prisma/seed.js",
+    seed: "node seed.js", // <-- Removed "prisma/" here
   },
 });
