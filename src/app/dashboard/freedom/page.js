@@ -310,28 +310,29 @@ export default function FreedomUnlimitedCard() {
         {/* 3. Quick Actions (Becomes Sticky below 180px header!) */}
         <div className="sticky top-[180px] z-20 bg-[#f4f5f9] pt-2 pb-4 -mx-4 px-4 shrink-0">
           <div className="grid grid-cols-5 gap-1.5">
-          <button onClick={() => setActiveAction("Pay Card")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><DollarSign className="w-4 h-4 text-[#0b5cba]" /></div>
-            <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Pay</span>
-          </button>
-          <button onClick={() => setActiveAction("Cash Advance")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><Banknote className="w-4 h-4 text-[#0b5cba]" /></div>
-            <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Get Cash</span>
-          </button>
-          <button onClick={() => setActiveAction("Rewards Hub")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><Gift className="w-4 h-4 text-[#0b5cba]" /></div>
-            <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Rewards</span>
-          </button>
-          <button onClick={() => setActiveAction("Statements")} className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><FileText className="w-4 h-4 text-[#0b5cba]" /></div>
-            <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Docs</span>
-          </button>
-          <button onClick={handleToggleLock} className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isLocked ? 'bg-red-100' : 'bg-[#eef4fb]'}`}>
-              {isLocked ? <Unlock className="w-4 h-4 text-red-600" /> : <Lock className="w-4 h-4 text-[#0b5cba]" />}
-            </div>
-            <span className={`text-[9px] font-bold text-center uppercase ${isLocked ? 'text-red-600' : 'text-gray-700'}`}>{isLocked ? 'Unlock' : 'Lock'}</span>
-          </button>
+            <button onClick={() => setActiveAction("Pay Card")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
+              <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><DollarSign className="w-4 h-4 text-[#0b5cba]" /></div>
+              <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Pay</span>
+            </button>
+            <button onClick={() => setActiveAction("Cash Advance")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
+              <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><Banknote className="w-4 h-4 text-[#0b5cba]" /></div>
+              <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Get Cash</span>
+            </button>
+            <button onClick={() => setActiveAction("Rewards Hub")} disabled={isLocked} className="disabled:opacity-50 bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
+              <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><Gift className="w-4 h-4 text-[#0b5cba]" /></div>
+              <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Rewards</span>
+            </button>
+            <button onClick={() => setActiveAction("Statements")} className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
+              <div className="w-9 h-9 rounded-full bg-[#eef4fb] flex items-center justify-center"><FileText className="w-4 h-4 text-[#0b5cba]" /></div>
+              <span className="text-[9px] font-bold text-gray-700 text-center uppercase">Docs</span>
+            </button>
+            <button onClick={handleToggleLock} className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-colors">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isLocked ? 'bg-red-100' : 'bg-[#eef4fb]'}`}>
+                {isLocked ? <Unlock className="w-4 h-4 text-red-600" /> : <Lock className="w-4 h-4 text-[#0b5cba]" />}
+              </div>
+              <span className={`text-[9px] font-bold text-center uppercase ${isLocked ? 'text-red-600' : 'text-gray-700'}`}>{isLocked ? 'Unlock' : 'Lock'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
@@ -418,7 +419,6 @@ export default function FreedomUnlimitedCard() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

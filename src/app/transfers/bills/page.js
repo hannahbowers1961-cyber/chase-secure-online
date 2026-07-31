@@ -37,14 +37,20 @@ export default function PayBills() {
     }, 1500);
   };
 
+  // ADDED: This function resets the amount and returns the user to the payment form
+  const handleDone = () => {
+    setAmount("");
+    setStep("payment_form");
+  };
+
   const filteredPayees = mockPayees.filter(payee => 
     payee.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // --- STEP 3: SUCCESS SCREEN ---
+// --- STEP 3: SUCCESS SCREEN ---
   if (step === "success") {
     return (
-      <div className="p-4 flex flex-col items-center justify-center h-full w-full space-y-4 mt-20 animate-in fade-in duration-300">
+      <div className="absolute inset-0 z-30 bg-slate-950 p-4 flex flex-col items-center justify-center h-full w-full space-y-4 animate-in fade-in duration-300">
         <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center animate-bounce">
           <CheckCircle2 className="w-12 h-12 text-blue-400" />
         </div>
@@ -53,12 +59,12 @@ export default function PayBills() {
           Your payment to <span className="font-semibold text-white">{selectedBiller.name}</span> is set.
         </p>
         
-        <div className="w-full bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 mt-6">
-          <div className="flex justify-between text-sm py-2 border-b border-slate-700/50">
+        <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 mt-6">
+          <div className="flex justify-between text-sm py-2 border-b border-slate-800">
             <span className="text-slate-400">Amount</span>
             <span className="text-white font-bold">${amount}</span>
           </div>
-          <div className="flex justify-between text-sm py-2 border-b border-slate-700/50">
+          <div className="flex justify-between text-sm py-2 border-b border-slate-800">
             <span className="text-slate-400">Date</span>
             <span className="text-white font-medium">Tomorrow</span>
           </div>
@@ -68,12 +74,12 @@ export default function PayBills() {
           </div>
         </div>
 
-        <Link 
-          href="/transfers"
-          className="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl flex justify-center transition-colors shadow-lg shadow-blue-500/20"
+        <button 
+          onClick={handleDone}
+          className="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl flex justify-center items-center transition-colors shadow-lg shadow-blue-500/20"
         >
           Done
-        </Link>
+        </button>
       </div>
     );
   }

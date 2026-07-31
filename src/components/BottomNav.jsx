@@ -7,12 +7,30 @@ import { SquareStack, RefreshCcw, DollarSign, Shield, User } from "lucide-react"
 export default function BottomNav() {
   const pathname = usePathname();
 
-  // Hide on the pre-login lock screen
-  if (pathname === "/") return null;
+  // 1. Add any paths here where the nav bar should NOT appear
+  const hiddenPaths = [
+    "/",          // Hide on the pre-login lock screen
+    "/transfers/bills", // Hide on the Pay Bills page
+    "/transfers/contacts",
+    "/transfers/schedule",
+    "/dashboard/deposit",
+    "/dashboard/checking",
+    "/dashboard/savings",
+    "/dashboard/credit-card",
+    "/dashboard/freedom",
+    "/dashboard/credit-wise",
+    "/dashboard/loans",
+    "/transfers/external",
+    "/transfers/wire",
+  ];
 
-  if (pathname === "/") {
-    return null;
-  }
+  // 2. Check if the current route matches any of our hidden paths
+  const shouldHide = hiddenPaths.some(path => 
+    path === "/" ? pathname === "/" : pathname.startsWith(path)
+  );
+
+  // 3. If it's a hidden path, return null to render nothing
+  if (shouldHide) return null;
 
   const navItems = [
     { name: "Accounts", href: "/dashboard", id: "accounts" },
