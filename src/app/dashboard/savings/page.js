@@ -23,26 +23,22 @@ export default function SavingsAccount() {
   // Modal Specific State
   const [transferAmount, setTransferAmount] = useState("");
   const [actionSuccess, setActionSuccess] = useState(false);
-  const [actionError, setActionError] = useState(""); // Validation error
-  const [isProcessing, setIsProcessing] = useState(false); // Real bank loading feel
+  const [actionError, setActionError] = useState(""); 
+  const [isProcessing, setIsProcessing] = useState(false); 
   const [downloading, setDownloading] = useState(null);
 
-  // Safe fallback while DB is loading
   if (!db) return null;
 
-  // STRICT DB BINDING: Use live data only
   const account = db.accounts.savings;
   const targetAccount = db.accounts.checking || { name: "Checking", mask: "0000" };
   const liveTransactions = account?.transactions || [];
 
-  // Filter dynamic transactions based on search query
   const filteredTransactions = liveTransactions.filter(tx => 
     (tx.desc && tx.desc.toLowerCase().includes(searchQuery.toLowerCase())) || 
     (tx.cat && tx.cat.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleTransfer = async () => {
-    // 1. FRONTEND VALIDATION
     const amountToTransfer = parseFloat(transferAmount);
     
     if (amountToTransfer > account.balance) {
@@ -51,12 +47,10 @@ export default function SavingsAccount() {
     }
 
     setActionError("");
-    setIsProcessing(true); // Trigger the "real bank" loading spinner
+    setIsProcessing(true); 
 
-    // 2. Execute Transfer (simulating network delay for authenticity)
     await executeTransfer("savings", "checking", transferAmount);
     
-    // Hold the loading state for just a moment longer to feel secure
     setTimeout(() => {
       setIsProcessing(false);
       setActionSuccess(true);
@@ -141,7 +135,6 @@ export default function SavingsAccount() {
               </div>
             </div>
 
-            {/* Error Alert */}
             {actionError && (
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
                 <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -149,7 +142,6 @@ export default function SavingsAccount() {
               </div>
             )}
             
-            {/* Dynamic Processing Button */}
             <button 
               onClick={handleTransfer}
               disabled={!transferAmount || transferAmount <= 0 || isProcessing}
@@ -197,12 +189,12 @@ export default function SavingsAccount() {
     }
   };
 
-  // Prevent rendering if account doesn't exist in the database
   if (!account) return <div className="p-8 text-center">Savings account not found.</div>;
 
   return (
     <div className="w-full h-full bg-[#f4f5f9] overflow-y-auto text-gray-900 pb-24 font-sans flex flex-col relative">
-      {/* 1. Unified Sticky Header: Fixed height of 160px */}
+      
+      {/* 1. Unified Sticky Header */}
       <div className="bg-[#0b5cba] text-white pt-6 pb-8 px-4 sticky top-0 z-30 shadow-md h-[160px] flex flex-col justify-between">
         <div className="flex items-center justify-between mb-2">
           <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0">
@@ -247,30 +239,31 @@ export default function SavingsAccount() {
           </div>
         </div>
 
-        {/* 3. Quick Actions (Becomes Sticky below header!) */}
+        {/* 3. Quick Actions (Now properly closed so it stays Sticky!) */}
         <div className="sticky top-[160px] z-20 bg-[#f4f5f9] pt-2 pb-4 -mx-4 px-4 shrink-0">
           <div className="grid grid-cols-2 gap-3">
-          <button 
-            onClick={() => setActiveAction("Transfer Funds")} 
-            className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
-          >
-            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center group-hover:bg-[#0b5cba] transition-colors">
-              <ArrowRightLeft className="w-5 h-5 text-[#0b5cba] group-hover:text-white transition-colors" />
-            </div>
-            <span className="text-xs font-semibold text-gray-700">Transfer</span>
-          </button>
-          <button 
-            onClick={() => setActiveAction("Statements & Docs")} 
-            className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
-          >
-            <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center group-hover:bg-[#0b5cba] transition-colors">
-              <Download className="w-5 h-5 text-[#0b5cba] group-hover:text-white transition-colors" />
-            </div>
-            <span className="text-xs font-semibold text-gray-700">Statements</span>
-          </button>
+            <button 
+              onClick={() => setActiveAction("Transfer Funds")} 
+              className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center group-hover:bg-[#0b5cba] transition-colors">
+                <ArrowRightLeft className="w-5 h-5 text-[#0b5cba] group-hover:text-white transition-colors" />
+              </div>
+              <span className="text-xs font-semibold text-gray-700">Transfer</span>
+            </button>
+            <button 
+              onClick={() => setActiveAction("Statements & Docs")} 
+              className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-[#0b5cba] hover:shadow-md transition-all group"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#eef4fb] flex items-center justify-center group-hover:bg-[#0b5cba] transition-colors">
+                <Download className="w-5 h-5 text-[#0b5cba] group-hover:text-white transition-colors" />
+              </div>
+              <span className="text-xs font-semibold text-gray-700">Statements</span>
+            </button>
+          </div>
         </div>
         
-        {/* Transactions List linked directly to DB */}
+        {/* Transactions List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="p-4 border-b border-gray-100">
             <div className="relative">
@@ -297,7 +290,6 @@ export default function SavingsAccount() {
             ) : (
               filteredTransactions.map((tx) => (
                 <div key={tx.id} className="flex flex-col">
-                  {/* Transaction Row */}
                   <div 
                     onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
                     className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
@@ -323,7 +315,6 @@ export default function SavingsAccount() {
                     </div>
                   </div>
                   
-                  {/* Expanded Details */}
                   {expandedTx === tx.id && (
                     <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 text-xs text-gray-600 flex justify-between animate-in slide-in-from-top-1 fade-in duration-200">
                       <div className="space-y-1">
@@ -368,7 +359,6 @@ export default function SavingsAccount() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }
