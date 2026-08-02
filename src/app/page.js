@@ -17,43 +17,52 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    if (!username || !password) {
-      setError("Enter your username and password.");
+  e.preventDefault();
+  if (!username || !password) {
+    setError("Enter your username and password.");
+    return;
+  }
+  
+  setError("");
+  setIsLoading(true);
+  
+  try {
+    // 1. Added the Vercel URL variable so the app dials out to the internet
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    
+    const res = await fetch(`${apiUrl}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // 2. <--- MAGIC WORD FOR SAVING COOKIES
+      body: JSON.stringify({ username, password })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      // 3. Added specific check for incorrect credentials (Status 401 Unauthorized)
+      if (res.status === 401) {
+        setError("Incorrect username or password.");
+      } else {
+        setError(data.error || "Login failed");
+      }
+      setIsLoading(false);
       return;
     }
     
-    setError("");
-    setIsLoading(true);
-    
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        setError(data.error || "Login failed");
-        setIsLoading(false);
-        return;
-      }
-      
-      if (data.requiresOtp === false) {
-        window.location.href = "/dashboard";
-        return;
-      }
-      
-      setMaskedEmail(data.maskedEmail);
-      setStep("otp");
-    } catch (err) {
-      setError("Network error. Please try again.");
-    } finally {
-      setIsLoading(false);
+    if (data.requiresOtp === false) {
+      window.location.href = "/dashboard";
+      return;
     }
-  };
+    
+    setMaskedEmail(data.maskedEmail);
+    setStep("otp");
+  } catch (err) {
+    setError("Network error. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
