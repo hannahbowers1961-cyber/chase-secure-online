@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  images: {
+    unoptimized: true, 
+  },
   serverExternalPackages: ['@prisma/client', 'prisma'],
   experimental: {
     serverActions: {
-      bodySizeLimit: '5mb', // Increases the limit to 5 MB for profile images
+      bodySizeLimit: '5mb', 
     },
   },
 };

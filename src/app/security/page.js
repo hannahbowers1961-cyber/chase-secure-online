@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import BankLogo from "@/components/BankLogo";
 import { useBank } from "@/context/BankContext";
-import { toggleCardLockInDB } from "@/app/actions"; // Imports the server action we built earlier!
 import { 
   ShieldCheck, Lock, Fingerprint, Key, Bell, Plane, 
   Smartphone, AlertTriangle, ChevronRight, EyeOff, X, 
@@ -49,24 +48,39 @@ export default function Security() {
   }
 
   // 2. Handle Syncing Card Locks with Database
-  const handleToggleCardLock = async (cardKey, account) => {
-    if (!account) return;
-    
-    const currentStatus = lockedCards[cardKey];
-    const newStatus = !currentStatus;
-    
-    // Optimistic UI Update (instant visual feedback)
-    setLockedCards(prev => ({ ...prev, [cardKey]: newStatus }));
-    
-    // Database Update
-    const response = await toggleCardLockInDB(account.id, newStatus);
-    
-    if (!response?.success) {
-      // Revert if database fails
-      setLockedCards(prev => ({ ...prev, [cardKey]: currentStatus }));
-      alert("Failed to update card lock status.");
+const handleToggleLock = async () => {
+  const newState = !isLocked;
+
+  // 1. Instantly update the UI so it feels lightning fast to the user
+  setIsLocked(newState);
+
+  try {
+    // 2. Secretly update the database via the API route
+    const res = await fetch('/api/card/toggle-lock', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        accountId: account.id,
+        newLockState: newState,
+      }),
+    });
+
+    const response = await res.json();
+
+    // 3. If the database update fails for some reason, revert the UI back
+    if (!response.success) {
+      setIsLocked(!newState);
+      alert("Failed to lock/unlock card. Please try again.");
     }
-  };
+  } catch (error) {
+    // Catch any network errors (e.g., user loses internet on their phone)
+    console.error("Network error while locking card:", error);
+    setIsLocked(!newState);
+    alert("Network error. Please check your connection.");
+  }
+};
 
   // --- NEW: Current Device State ---
   const [currentDevice, setCurrentDevice] = useState({

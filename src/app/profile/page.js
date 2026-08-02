@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useBank } from "@/context/BankContext";
-import { updateProfileImageInDB } from "@/app/actions"; // Imports the new server action
 import { 
   User, Shield, Bell, FileText, HelpCircle, LogOut, 
   ChevronRight, X, Mail, Phone, Lock, Fingerprint, 
@@ -68,7 +67,7 @@ export default function Profile() {
   const user = db.user;
   const initials = `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase();
 
-  // 2. Handle Image Upload & Database Sync
+// 2. Handle Image Upload & Database Sync
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -112,11 +111,28 @@ export default function Profile() {
           // 3. Optimistic UI Update (Shows instantly)
           setProfileImage(compressedBase64); 
 
-          // 4. Safely upload the tiny string to the database
+          // 4. Safely upload the tiny string to the database via API
           if (user.id) {
-            const response = await updateProfileImageInDB(user.id, compressedBase64);
-            if (!response.success) {
-              alert("Failed to sync profile picture to servers.");
+            try {
+              const res = await fetch('/api/user/profile-image', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: user.id,
+                  base64Image: compressedBase64,
+                }),
+              });
+
+              const response = await res.json();
+              
+              if (!response.success) {
+                alert("Failed to sync profile picture to servers.");
+              }
+            } catch (error) {
+              console.error("Network error syncing image:", error);
+              alert("Network error. Could not sync profile picture.");
             }
           } else {
             console.error("User ID missing from BankContext. Cannot sync image.");
