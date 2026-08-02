@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleLoginSubmit = async (e) => {
+const handleLoginSubmit = async (e) => {
   e.preventDefault();
   if (!username || !password) {
     setError("Enter your username and password.");
@@ -27,20 +27,20 @@ export default function LoginPage() {
   setIsLoading(true);
   
   try {
-    // 1. Added the Vercel URL variable so the app dials out to the internet
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    // 1. Updated to your new Vercel URL (NO trailing slash!)
+    const apiUrl = "https://wagwan-testpage.vercel.app";
     
+    // 2. This now perfectly builds: https://wagwan-testpage.vercel.app/api/auth/login
     const res = await fetch(`${apiUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include", // 2. <--- MAGIC WORD FOR SAVING COOKIES
+      credentials: "include", 
       body: JSON.stringify({ username, password })
     });
     
     const data = await res.json();
     
     if (!res.ok) {
-      // 3. Added specific check for incorrect credentials (Status 401 Unauthorized)
       if (res.status === 401) {
         setError("Incorrect username or password.");
       } else {
