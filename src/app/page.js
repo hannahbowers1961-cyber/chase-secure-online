@@ -64,7 +64,7 @@ const handleLoginSubmit = async (e) => {
   }
 };
 
-  const handleOtpSubmit = async (e) => {
+const handleOtpSubmit = async (e) => {
     e.preventDefault();
     if (otp.length < 6) return;
 
@@ -72,9 +72,15 @@ const handleLoginSubmit = async (e) => {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/verify", {
+      // 1. Define the API URL here as well
+      const apiUrl = "https://wagwan-testpage.vercel.app";
+      
+      // 2. Update the fetch URL to use the absolute path
+      const res = await fetch(`${apiUrl}/api/auth/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // Add credentials: "include" if your OTP route relies on cookies/sessions!
+        credentials: "include", 
         body: JSON.stringify({ username, otp, rememberMe })
       });
       
