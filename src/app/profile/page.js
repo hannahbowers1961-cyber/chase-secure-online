@@ -114,8 +114,10 @@ export default function Profile() {
           // 4. Safely upload the tiny string to the database via API
           if (user.id) {
             try {
-              const res = await fetch('/api/user/profile-image', {
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+              const res = await fetch(`${apiUrl}/api/user/profile-image`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                   'Content-Type': 'application/json',
                 },

@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react"; // Imported for the premium spinner
+import { App } from '@capacitor/app';
 
 const BankContext = createContext();
 
@@ -33,16 +34,40 @@ export function BankProvider({ children }) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // Handle Android Hardware Back Button
+  useEffect(() => {
+    const setupBackButton = async () => {
+      await App.addListener('backButton', () => {
+        if (window.location.pathname !== "/") {
+          // If not on the login screen, go back one page
+          window.history.back();
+        } else {
+          // If on the login screen, safely exit the app
+          App.exitApp();
+        }
+      });
+    };
+
+    setupBackButton();
+  }, []);
   useEffect(() => {
     if (pathname === "/") {
       setIsLoading(false);
       return;
     }
 
+    // Explicitly kill the spinner before returning!
+    if (db) {
+      setIsLoading(false);
+      return;
+    }
+
     async function fetchDatabase() {
       try {
-        const response = await fetch(`/api/user?t=${Date.now()}`, {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const response = await fetch(`${apiUrl}/api/user?t=${Date.now()}`, {
           cache: 'no-store',
+          credentials: 'include', // <--- CRUCIAL: Sends your session cookie!
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
@@ -136,8 +161,10 @@ export function BankProvider({ children }) {
       // Artificial Transfer Security Delay (2 seconds)
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const response = await fetch('/api/transfer', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const response = await fetch(`${apiUrl}/api/transfer`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fromAccountKey, toAccountKey, amount })
       });

@@ -1,5 +1,5 @@
 "use client";
-
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AlertTriangle, ChevronRight, Lock, Home } from "lucide-react";
 import BankLogo from "@/components/BankLogo";
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const router = useRouter();
 
 const handleLoginSubmit = async (e) => {
   e.preventDefault();
@@ -28,7 +29,7 @@ const handleLoginSubmit = async (e) => {
   
   try {
     // 1. Updated to your new Vercel URL (NO trailing slash!)
-    const apiUrl = "https://wagwan-testpage.vercel.app";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     
     // 2. This now perfectly builds: https://wagwan-testpage.vercel.app/api/auth/login
     const res = await fetch(`${apiUrl}/api/auth/login`, {
@@ -51,7 +52,7 @@ const handleLoginSubmit = async (e) => {
     }
     
     if (data.requiresOtp === false) {
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
       return;
     }
     
@@ -73,7 +74,7 @@ const handleOtpSubmit = async (e) => {
 
     try {
       // 1. Define the API URL here as well
-      const apiUrl = "https://wagwan-testpage.vercel.app";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       
       // 2. Update the fetch URL to use the absolute path
       const res = await fetch(`${apiUrl}/api/auth/verify`, {
@@ -92,7 +93,7 @@ const handleOtpSubmit = async (e) => {
         return;
       }
       
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
     } catch (err) {
       setError("Network error. Please try again.");
       setIsLoading(false);
