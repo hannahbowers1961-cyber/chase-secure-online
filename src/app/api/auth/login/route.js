@@ -62,3 +62,15 @@ export async function POST(req) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+// Add this to the bottom of your login route file
+export async function OPTIONS(request) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
