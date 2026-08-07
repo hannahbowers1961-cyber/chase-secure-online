@@ -3,20 +3,37 @@ import { prisma } from "@/lib/prisma";
 import nodemailer from "nodemailer";
 import { cookies } from "next/headers";
 
-// Define strict CORS headers for credentials
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3000", // MUST be exact when using cookies, no "*"
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Credentials": "true", // Required for cookies
-};
+// 1. Add all your valid frontend URLs here
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://wagwan-testpage.vercel.app" // Replace or add your actual live frontend link here
+];
 
-// Handle the preflight request explicitly
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
+// 2. Helper function to dynamically check and set the origin
+function getCorsHeaders(req) {
+  const origin = req.headers.get("origin");
+  
+  // If the request comes from an allowed origin, echo it back. 
+  // Otherwise, default to localhost to prevent errors.
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+// Handle the preflight request dynamically
+export async function OPTIONS(req) {
+  return NextResponse.json({}, { headers: getCorsHeaders(req) });
 }
 
 export async function POST(req) {
+  // Generate the correct headers for this specific request
+  const corsHeaders = getCorsHeaders(req);
+
   try {
     const { username, password } = await req.json();
     const user = await prisma.user.findUnique({ where: { username } });
@@ -40,7 +57,7 @@ export async function POST(req) {
       cookieStore.set("session_token", user.id, {
         httpOnly: true, 
         secure: process.env.NODE_ENV === "production", 
-        sameSite: "none", // Must be "none" for cross-origin cookies
+        sameSite: "none",
         maxAge: 60 * 60 * 24 * 7 
       });
       return NextResponse.json({ success: true, requiresOtp: false }, { headers: corsHeaders });
