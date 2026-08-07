@@ -64,16 +64,16 @@ export function BankProvider({ children }) {
 
     async function fetchDatabase() {
       try {
-        // Remove these lines:
-// const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-// const response = await fetch(`${apiUrl}/api/user?t=${Date.now()}`, {
+        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
+        const fetchUrl = `${apiUrl}/api/user?t=${Date.now()}`;
 
-// Replace them with this rock-solid URL builder:
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
-const response = await fetch(`${apiUrl}/api/user?t=${Date.now()}`, {
+        // Print the exact target URL to the browser console
+        console.log("🔥 FETCHING USER DATA FROM:", fetchUrl);
+
+        const response = await fetch(fetchUrl, {
           cache: 'no-store',
-          credentials: 'include', // <--- CRUCIAL: Sends your session cookie!
+          credentials: 'include',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
