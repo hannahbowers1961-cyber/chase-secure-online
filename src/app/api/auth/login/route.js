@@ -3,35 +3,49 @@ import { prisma } from "@/lib/prisma";
 import nodemailer from "nodemailer";
 import { cookies } from "next/headers";
 
+// Define strict CORS headers for credentials
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "http://localhost:3000", // MUST be exact when using cookies, no "*"
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Credentials": "true", // Required for cookies
+};
+
+// Handle the preflight request explicitly
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(req) {
   try {
     const { username, password } = await req.json();
     const user = await prisma.user.findUnique({ where: { username } });
 
-    if (!user) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-
-    // --- NO MORE HASHING: Direct plain-text comparison ---
-    if (user.password !== password) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401, headers: corsHeaders });
     }
-    // -----------------------------------------------------
 
-    if (!user.email) return NextResponse.json({ error: "No email registered for this account" }, { status: 400 });
+    if (user.password !== password) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401, headers: corsHeaders });
+    }
 
-    // 1. Check for trusted device bypass
+    if (!user.email) {
+      return NextResponse.json({ error: "No email registered for this account" }, { status: 400, headers: corsHeaders });
+    }
+
     const cookieStore = await cookies();
     const trustedDevice = cookieStore.get("trusted_device")?.value;
 
     if (trustedDevice === user.id) {
       cookieStore.set("session_token", user.id, {
-        httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 60 * 60 * 24 * 7 
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === "production", 
+        sameSite: "none", // Must be "none" for cross-origin cookies
+        maxAge: 60 * 60 * 24 * 7 
       });
-      return NextResponse.json({ success: true, requiresOtp: false });
+      return NextResponse.json({ success: true, requiresOtp: false }, { headers: corsHeaders });
     }
 
-    // ... The rest of your OTP and nodemailer code stays exactly the same ...
-
-    // 2. Generate OTP if not trusted
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); 
 
@@ -56,21 +70,10 @@ export async function POST(req) {
     const [name, domain] = user.email.split('@');
     const maskedEmail = `${name[0]}***@${domain}`;
 
-    return NextResponse.json({ success: true, requiresOtp: true, maskedEmail });
+    return NextResponse.json({ success: true, requiresOtp: true, maskedEmail }, { headers: corsHeaders });
+
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: corsHeaders });
   }
-}
-
-// Add this to the bottom of your login route file
-export async function OPTIONS(request) {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
 }
