@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Chase Mobile® US</string>
-    <string name="title_activity_main">Chase Mobile® US</string>
+    <string name="app_name">Chase Mobile® U.S.</string>
+    <string name="title_activity_main">Chase Mobile® U.S.</string>
     <string name="package_name">com.chase.app</string>
     <string name="custom_url_scheme">com.chase.app</string>
 </resources>
