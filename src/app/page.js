@@ -4,6 +4,13 @@ import { useState } from "react";
 import { AlertTriangle, ChevronRight, Lock, Home, ChevronLeft } from "lucide-react";
 import BankLogo from "@/components/BankLogo";
 
+import { Orbitron } from "next/font/google";
+
+const orbitron = Orbitron({ 
+  subsets: ["latin"], 
+  weight: ["400", "700", "900"] 
+});
+
 export default function LoginPage() {
   const [step, setStep] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
@@ -117,7 +124,7 @@ export default function LoginPage() {
             
             {/* Transparent Logo */}
             <div className="absolute top-10 left-1/2 -translate-x-1/2 flex items-center justify-center z-20">
-              <div className="text-white font-bold text-[28px] tracking-wider flex items-center gap-2">
+              <div className={`${orbitron.className} text-white font-bold text-[28px] tracking-wider flex items-center gap-2`}>
                 CHASE
                 <BankLogo className="w-8 h-8 text-white" />
               </div>
