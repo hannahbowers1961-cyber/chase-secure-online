@@ -58,7 +58,7 @@ export default function BottomNav() {
             <div className="relative flex items-center justify-center h-6 w-6">
               
               {item.id === "accounts" && (
-                <wallet className={`w-5 h-5 ${isActive ? "fill-[#0b5cba]/10" : ""}`} strokeWidth={stroke} />
+                <SquareStack className={`w-5 h-5 ${isActive ? "fill-[#0b5cba]/10" : ""}`} strokeWidth={stroke} />
               )}
               
               {item.id === "pay" && (
