@@ -11,14 +11,16 @@ import {
   ChevronRight, 
   ChevronDown, 
   Calendar, 
-  ChevronUp 
+  ChevronUp,
+  Lock // Added Lock icon for the restriction screen
 } from "lucide-react";
 import { bankAccounts } from "@/lib/mockData"; 
 import { useRouter } from "next/navigation";
+import { useBank } from "@/context/BankContext"; 
 
 // Mock Contacts Database (Original Dark Theme Colors)
 const zelleContacts = [
-  { id: 1, name: "John Smith", details: "Enrolled with Zelle®", initials: "JS", color: "bg-[#741eed]/20 text-[#741eed] border-[#741eed]/30" },
+  { id: 1, name: "Grandma", details: "Enrolled with Zelle®", initials: "JS", color: "bg-[#741eed]/20 text-[#741eed] border-[#741eed]/30" },
   { id: 2, name: "Maria Silva", details: "555-019-8372", initials: "MS", color: "bg-slate-800 text-slate-400 border-slate-700" },
   { id: 3, name: "David Chen", details: "david.chen@email.com", initials: "DC", color: "bg-blue-900/30 text-blue-400 border-blue-800/50" },
   { id: 4, name: "Sarah Jenkins", details: "Enrolled with Zelle®", initials: "SJ", color: "bg-emerald-900/30 text-emerald-400 border-emerald-800/50" },
@@ -26,9 +28,10 @@ const zelleContacts = [
 
 export default function ZelleSend() {
   const router = useRouter();
+  const { db } = useBank(); 
   
   // Multi-step Flow State
-  const [step, setStep] = useState("select_contact"); // 'select_contact', 'enter_amount', 'success'
+  const [step, setStep] = useState("select_contact");
   const [selectedContact, setSelectedContact] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [amount, setAmount] = useState("");
@@ -37,6 +40,9 @@ export default function ZelleSend() {
   const [isSending, setIsSending] = useState(false);
 
   const checkingAccount = bankAccounts?.[0] || { name: "CHASE CHECKING (...1234)", balance: 5432.10 }; 
+
+  // --- RESTRICTION LOGIC ---
+  const canUseZelle = db?.user?.canUseZelle ?? true;
 
   // Filter contacts based on search
   const filteredContacts = zelleContacts.filter(contact => 
@@ -65,7 +71,6 @@ export default function ZelleSend() {
   };
 
   const handleDone = () => {
-    // Reset everything back to the Zelle homepage state
     setAmount("");
     setMemo("");
     setRepeatPayment(false);
@@ -74,7 +79,7 @@ export default function ZelleSend() {
     setStep("select_contact");
   };
 
-  // --- STEP 3: SUCCESS SCREEN (Original Dark Design) ---
+  // --- STEP 3: SUCCESS SCREEN ---
   if (step === "success") {
     return (
       <div className="fixed inset-0 z-[99999] flex justify-center sm:bg-black/80 backdrop-blur-sm">
@@ -119,10 +124,9 @@ export default function ZelleSend() {
     <div className="fixed inset-0 z-[99999] flex justify-center sm:bg-black/80 backdrop-blur-sm">
       <div className="w-full h-full sm:max-w-md bg-slate-950 flex flex-col relative sm:border-x sm:border-slate-800 shadow-2xl overflow-hidden font-sans">
         
-        {/* --- STEP 1: SELECT CONTACT (Original Dark Design) --- */}
+        {/* --- STEP 1: SELECT CONTACT --- */}
         {step === "select_contact" && (
           <div className="flex flex-col h-full animate-in slide-in-from-left-4 duration-300">
-            {/* Header */}
             <div className="bg-slate-950 pt-4 pb-4 px-4 border-b border-slate-800 sticky top-0 z-10">
               <div className="flex items-center gap-3">
                 <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-slate-800 rounded-full transition-colors">
@@ -137,7 +141,6 @@ export default function ZelleSend() {
 
             <div className="p-4 flex-1 overflow-y-auto">
               <div className="space-y-6">
-                {/* Search Bar */}
                 <div className="relative shadow-sm">
                   <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input 
@@ -149,15 +152,12 @@ export default function ZelleSend() {
                   />
                 </div>
 
-                {/* Contacts List */}
                 <div>
                   <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">
                     {searchQuery ? "Search Results" : "Trusted Contacts"}
                   </h2>
                   
                   <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800/50">
-                    
-                    {/* Render empty state ONLY if there are no contacts AND it's not a valid new recipient */}
                     {searchQuery && !isValidNewRecipient && filteredContacts.length === 0 ? (
                       <div className="p-8 text-center flex flex-col items-center">
                         <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mb-3">
@@ -168,7 +168,6 @@ export default function ZelleSend() {
                       </div>
                     ) : (
                       <>
-                        {/* Dynamic New Recipient Button */}
                         {isValidNewRecipient && (
                           <button 
                             onClick={() => handleContactSelect({
@@ -190,7 +189,6 @@ export default function ZelleSend() {
                           </button>
                         )}
 
-                        {/* Existing Filtered Contacts */}
                         {filteredContacts.map((contact) => (
                           <button 
                             key={contact.id}
@@ -215,28 +213,24 @@ export default function ZelleSend() {
           </div>
         )}
 
-        {/* --- STEP 2: ENTER AMOUNT (Chase Layout combined with Original Dark Design) --- */}
+        {/* --- STEP 2: ENTER AMOUNT --- */}
         {step === "enter_amount" && (
           <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
-            
-            {/* Amount Entry Header (Fixed at top) */}
             <div className="bg-gradient-to-b from-[#741eed]/20 to-transparent pt-4 pb-6 px-4 border-b border-[#741eed]/10 shrink-0">
               <div className="flex items-center justify-between mb-8">
                 <button onClick={() => setStep("select_contact")} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors text-white">
                   <ArrowLeft className="w-6 h-6" />
                 </button>
                 
-                {/* Sending To Pill */}
                 <div className="bg-slate-900/80 border border-slate-700/50 rounded-full px-4 py-1.5 flex items-center gap-2 max-w-[200px] overflow-hidden whitespace-nowrap text-ellipsis">
                   <span className="text-xs text-slate-400 font-medium uppercase tracking-wider flex-shrink-0">To</span>
                   <div className="w-1 h-1 rounded-full bg-slate-600 flex-shrink-0"></div>
                   <span className="text-sm font-bold text-white truncate">{selectedContact?.name}</span>
                 </div>
                 
-                <div className="w-10"></div> {/* Spacer for centering */}
+                <div className="w-10"></div> 
               </div>
 
-              {/* Massive, Clean Currency Input */}
               <div className="text-center">
                 <div className="flex justify-center items-center text-7xl font-bold text-white mb-2 tracking-tighter">
                   <span className="text-slate-500 mr-1">$</span>
@@ -259,10 +253,7 @@ export default function ZelleSend() {
               </div>
             </div>
 
-            {/* Scrollable details area (Memo, Toggles, Button) */}
             <div className="p-4 flex-1 flex flex-col overflow-y-auto pb-8">
-              
-              {/* Memo Field */}
               <div className="mb-8">
                 <label className="text-[14px] text-slate-400 mb-1 block">Memo (optional)</label>
                 <input
@@ -276,10 +267,7 @@ export default function ZelleSend() {
                 </p>
               </div>
 
-              {/* Payment Details Options (Chase layout styling adapted to dark mode) */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800/50 mb-8 shadow-sm">
-                
-                {/* Pay From */}
                 <div className="px-4 py-3 relative">
                   <label className="text-[14px] text-slate-400 block mb-0.5">Pay from</label>
                   <select className="w-full appearance-none bg-transparent text-[16px] text-[#741eed] font-medium outline-none pr-8">
@@ -288,14 +276,12 @@ export default function ZelleSend() {
                   <ChevronDown className="w-5 h-5 text-slate-500 absolute right-4 bottom-3 pointer-events-none" />
                 </div>
 
-                {/* Send On */}
                 <div className="px-4 py-3 relative">
                   <label className="text-[14px] text-slate-400 block mb-0.5">Send on</label>
                   <div className="text-[16px] text-[#741eed] font-medium">Today</div>
                   <Calendar className="w-5 h-5 text-slate-500 absolute right-4 bottom-3 pointer-events-none" />
                 </div>
 
-                {/* Repeat Payment Toggle */}
                 <div className="px-4 py-4 flex justify-between items-center">
                   <span className="text-[16px] text-slate-200">Repeat payment</span>
                   <button 
@@ -308,7 +294,6 @@ export default function ZelleSend() {
                 </div>
               </div>
 
-              {/* Security & Action Buttons */}
               <div className="mt-auto">
                 <div className="mb-6 flex items-center justify-center gap-2 text-slate-500">
                   <ShieldCheck className="w-4 h-4" />
@@ -333,6 +318,41 @@ export default function ZelleSend() {
                 </div>
               </div>
 
+            </div>
+          </div>
+)}
+
+        {/* --- CHASE-STYLE MODAL OVERLAY --- */}
+        {!canUseZelle && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-[#f2f4f7] w-full max-w-[320px] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+              
+              <div className="p-6 text-center space-y-4">
+                <h2 className="text-[20px] font-bold text-black leading-tight">
+                  We locked your account due to unusual activity
+                </h2>
+                <p className="text-[15px] font-medium text-black leading-snug">
+                  Call us to unlock it. If you're a commercial client, reach out to your servicing team.
+                </p>
+                <p className="text-[14px] font-medium text-black leading-snug">
+                  Please note that you will not be able to access your account information, documents or statements online or on the mobile app until we unlock your account.
+                </p>
+              </div>
+
+              <div className="flex border-t border-gray-300 h-[52px]">
+                <a 
+                  href="tel:18009359935" 
+                  className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] border-r border-gray-300 hover:bg-gray-200/50 transition-colors active:bg-gray-300"
+                >
+                  Call us
+                </a>
+                <button 
+                  onClick={() => router.back()} 
+                  className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] hover:bg-gray-200/50 transition-colors active:bg-gray-300"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}

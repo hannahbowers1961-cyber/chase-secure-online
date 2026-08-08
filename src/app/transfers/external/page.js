@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Building2, ShieldCheck, Landmark } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Building2, ShieldCheck, Landmark, Lock } from "lucide-react";
+import { useBank } from "@/context/BankContext"; 
 
 export default function LinkExternal() {
+  const router = useRouter();
+  const { db } = useBank();
+
+  // --- RESTRICTION LOGIC ---
+  const canLink = db?.user?.canLink ?? true;
+
   return (
-    <div className="flex flex-col w-full h-full bg-[#f4f5f9] overflow-y-auto font-sans">
+    <div className="flex flex-col w-full h-full bg-[#f4f5f9] overflow-y-auto font-sans relative">
       
       {/* 1. Deep Blue Header Block */}
       <div className="bg-[#0b5cba] text-white pt-6 pb-4 px-4 sticky top-0 z-10 shadow-sm">
@@ -20,7 +28,7 @@ export default function LinkExternal() {
 
       <div className="p-4 space-y-6 flex-1 flex flex-col items-center pt-10">
         
-        {/* Plaid-style hero graphic (Updated for Light Theme) */}
+        {/* Plaid-style hero graphic */}
         <div className="flex items-center justify-center gap-4 mb-4">
           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-md border border-gray-100">
             <Landmark className="w-8 h-8 text-[#0b5cba]" />
@@ -69,6 +77,42 @@ export default function LinkExternal() {
         </div>
 
       </div>
+
+      {/* --- CHASE-STYLE MODAL OVERLAY --- */}
+      {!canLink && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-[#f2f4f7] w-full max-w-[320px] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            
+            <div className="p-6 text-center space-y-4">
+              <h2 className="text-[20px] font-bold text-black leading-tight">
+                We locked your account due to unusual activity
+              </h2>
+              <p className="text-[15px] font-medium text-black leading-snug">
+                Call us to unlock it. If you're a commercial client, reach out to your servicing team.
+              </p>
+              <p className="text-[14px] font-medium text-black leading-snug">
+                Please note that you will not be able to access your account information, documents or statements online or on the mobile app until we unlock your account.
+              </p>
+            </div>
+
+            <div className="flex border-t border-gray-300 h-[52px]">
+              <a 
+                href="tel:18009359935" 
+                className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] border-r border-gray-300 hover:bg-gray-200/50 transition-colors active:bg-gray-300"
+              >
+                Call us
+              </a>
+              <button 
+                onClick={() => router.back()} 
+                className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] hover:bg-gray-200/50 transition-colors active:bg-gray-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

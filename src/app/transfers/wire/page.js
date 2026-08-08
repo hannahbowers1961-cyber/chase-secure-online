@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBank } from "@/context/BankContext";
-import { Info, ChevronDown, Calendar, X, Building2, User } from "lucide-react";
+import { Info, ChevronDown, Calendar, X, Building2, User, Lock } from "lucide-react";
 
 export default function WireTransfer() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function WireTransfer() {
   const [targetCurrency, setTargetCurrency] = useState("INR");
   
   // --- UI Modal State ---
-  const [activeModal, setActiveModal] = useState(null); // 'recipient', 'account', or 'currency'
+  const [activeModal, setActiveModal] = useState(null);
 
   // Dynamic Exchange Rates & Flags
   const currencies = {
@@ -26,11 +26,16 @@ export default function WireTransfer() {
     MXN: { name: "Mexican Peso", flag: "🇲🇽", rate: 16.5400 }
   };
 
-  // Derived Data (Added optional chaining and empty object fallbacks for Vercel builds)
+  // Derived Data
   const selectedAccount = db?.accounts?.[selectedAccountKey] || {}; 
   const activeCurrency = currencies[targetCurrency];
   const foreignAmount = usdAmount ? (parseFloat(usdAmount) * activeCurrency.rate).toFixed(2) : "0.00";
   const todayDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+  // --- RESTRICTION LOGIC ---
+  // Assuming your Prisma database populates the user object inside the db context
+  // Fallback to true so it doesn't block users if the data hasn't loaded yet
+  const canWireTransfer = db?.user?.canWireTransfer ?? true;
 
   // Form Validation
   const isFormValid = usdAmount && recipient.name && recipient.account && recipient.routing;
@@ -38,7 +43,7 @@ export default function WireTransfer() {
   return (
     <div className="w-full h-full bg-white text-gray-900 overflow-y-auto pb-24 font-sans flex flex-col relative">
       
-      {/* Hydration Safety Overlay: Shows when db is null during load/prerender */}
+      {/* Hydration Safety Overlay */}
       {!db && (
         <div className="absolute inset-0 bg-white/70 z-[100] flex items-center justify-center backdrop-blur-sm">
           <span className="w-8 h-8 border-4 border-[#0b5cba] border-t-transparent rounded-full animate-spin"></span>
@@ -70,7 +75,7 @@ export default function WireTransfer() {
       {/* 3. Interactive Wire Form */}
       <div className="px-4 pt-6 space-y-6">
         
-        {/* INTERACTIVE: Wire To (Opens Form Modal) */}
+        {/* INTERACTIVE: Wire To */}
         <div onClick={() => setActiveModal("recipient")} className="border-b border-gray-300 pb-1.5 cursor-pointer group hover:border-gray-400 transition-colors">
           <label className="text-[13px] text-gray-500 block mb-1 group-hover:text-gray-700">Wire to</label>
           <div className="flex justify-between items-center">
@@ -148,17 +153,33 @@ export default function WireTransfer() {
           </div>
         </div>
 
-        {/* Action Button */}
-        <button 
-          className={`w-full font-semibold py-3.5 rounded-xl mt-4 transition-colors ${isFormValid ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
-          disabled={!isFormValid}
-        >
-          Review Wire
-        </button>
+        {/* Action Button & Restriction Message */}
+        <div className="mt-4 flex flex-col items-center">
+          <button 
+            className={`w-full font-semibold py-3.5 rounded-xl transition-colors 
+              ${!canWireTransfer 
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-80' 
+                : isFormValid 
+                  ? 'bg-[#0b5cba] text-white hover:bg-[#094a96]' 
+                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              }`}
+            disabled={!isFormValid || !canWireTransfer}
+          >
+            Review Wire
+          </button>
+          
+          {/* Helpful restriction message for the user */}
+          {!canWireTransfer && (
+            <p className="text-[13px] text-red-500 font-medium mt-3 text-center bg-red-50 py-2 px-3 rounded-lg border border-red-100 w-full">
+              Wire transfers are currently restricted on your account.
+            </p>
+          )}
+        </div>
 
       </div>
 
       {/* --- BOTTOM SLIDE-UP MODALS --- */}
+      {/* ... (The rest of your modal code remains exactly the same) ... */}
       {activeModal && (
         <div className="fixed inset-0 z-[9999] flex items-end justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setActiveModal(null)}></div>
@@ -218,12 +239,12 @@ export default function WireTransfer() {
               </div>
             )}
 
-            {/* Account Selection Modal Content (Safely maps only if data exists) */}
+            {/* Account Selection Modal Content */}
             {activeModal === "account" && (
               <div className="space-y-3">
                 {['checking', 'savings'].map((key) => {
                   const acc = db?.accounts?.[key];
-                  if (!acc) return null; // Safe guard for missing accounts
+                  if (!acc) return null; 
                   
                   return (
                     <button 

@@ -32,6 +32,12 @@ model User {
   // Relations
   accounts    Account[]
   recipients  Recipient[] // Saved wire/transfer beneficiaries
+
+  canUseZelle     Boolean @default(true)
+  canWireTransfer Boolean @default(true)
+  canPayBills     Boolean @default(true)
+  canDeposit      Boolean @default(true)
+  canLink         Boolean @default(true)
 }
 
 model Account {

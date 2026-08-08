@@ -2,9 +2,14 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Camera, HelpCircle, ChevronRight, Zap, Check, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, HelpCircle, ChevronRight, Zap, Check, Trash2, Loader2, Lock } from "lucide-react";
+import { useBank } from "@/context/BankContext"; 
+import { useRouter } from "next/navigation"; // Added router for the go back button
 
 export default function MobileDeposit() {
+  const { db } = useBank(); 
+  const router = useRouter();
+  
   const [amount, setAmount] = useState("");
   const [frontImage, setFrontImage] = useState(null);
   const [backImage, setBackImage] = useState(null);
@@ -13,6 +18,9 @@ export default function MobileDeposit() {
 
   const frontInputRef = useRef(null);
   const backInputRef = useRef(null);
+
+  // --- RESTRICTION LOGIC ---
+  const canDeposit = db?.user?.canDeposit ?? true;
 
   // Handle capturing/selecting the image for Front/Back
   const handleImageCapture = (e, type) => {
@@ -180,20 +188,40 @@ export default function MobileDeposit() {
           Deposits before 11 PM ET process same day.
         </div>
 
-        <button 
-          onClick={handleDeposit}
-          disabled={!amount || parseFloat(amount) <= 0 || !frontImage || !backImage || isSubmitting}
-          className="w-full bg-[#0b5cba] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#094a96] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Processing Deposit...
-            </>
-          ) : (
-            "Deposit"
-          )}
-        </button>
+        {/* Action Button */}
+        <div className="mt-4 flex flex-col items-center pb-6">
+          <button 
+            onClick={handleDeposit}
+            disabled={!amount || parseFloat(amount) <= 0 || !frontImage || !backImage || isSubmitting}
+            className="w-full bg-[#0b5cba] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#094a96] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing Deposit...
+              </>
+            ) : (
+              "Deposit"
+            )}
+          </button>
+</div>
+
+        {/* --- CHASE-STYLE MODAL OVERLAY --- */}
+        {!canDeposit && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-[#f2f4f7] w-full max-w-[320px] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="p-6 text-center space-y-4">
+                <h2 className="text-[20px] font-bold text-black leading-tight">We locked your account due to unusual activity</h2>
+                <p className="text-[15px] font-medium text-black leading-snug">Call us to unlock it. If you're a commercial client, reach out to your servicing team.</p>
+                <p className="text-[14px] font-medium text-black leading-snug">Please note that you will not be able to access your account information, documents or statements online or on the mobile app until we unlock your account.</p>
+              </div>
+              <div className="flex border-t border-gray-300 h-[52px]">
+                <a href="tel:18009359935" className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] border-r border-gray-300 active:bg-gray-300">Call us</a>
+                <button onClick={() => router.back()} className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] active:bg-gray-300">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

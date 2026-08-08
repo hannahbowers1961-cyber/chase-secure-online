@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, ReceiptText, Building2, Calendar, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ReceiptText, Building2, Calendar, ChevronDown, ChevronRight, Search, Lock } from "lucide-react";
 import { bankAccounts } from "@/lib/mockData"; 
 import { useRouter } from "next/navigation";
+import { useBank } from "@/context/BankContext"; // Added Context Import
 
 // Mock Payees Database
 const mockPayees = [
@@ -17,6 +18,7 @@ const mockPayees = [
 
 export default function PayBills() {
   const router = useRouter();
+  const { db } = useBank(); // Extract db from context
   
   // State Management
   const [step, setStep] = useState("payment_form"); // 'select_payee', 'payment_form', 'success'
@@ -27,8 +29,12 @@ export default function PayBills() {
 
   const checkingAccount = bankAccounts[0] || { name: "Checking Account", balance: 5000 }; 
 
+  // --- RESTRICTION LOGIC ---
+  // Safely check if the user is allowed to use Bill Pay (defaults to true if loading)
+  const canPayBills = db?.user?.canPayBills ?? true;
+
   const handlePayment = () => {
-    if (!amount || amount <= 0) return;
+    if (!amount || amount <= 0 || !canPayBills) return; // Added check here too
     
     setIsPaying(true);
     setTimeout(() => {
@@ -222,12 +228,12 @@ export default function PayBills() {
               </button>
             </div>
 
-            {/* Blue Pay Button */}
+            {/* Action Buttons & Restriction Message */}
             <div className="mt-auto pt-6 pb-8">
               <button 
                 onClick={handlePayment}
-                disabled={!amount || amount <= 0 || isPaying}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none text-white font-bold text-lg py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20"
+                disabled={!amount || amount <= 0 || isPaying || !canPayBills}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed text-white font-bold text-lg py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20"
               >
                 {isPaying ? (
                   <span className="animate-pulse">Scheduling...</span>
@@ -235,8 +241,34 @@ export default function PayBills() {
                   `Schedule Payment`
                 )}
               </button>
+
+              {/* Added Restricted Warning Message for dark mode */}
+              {!canPayBills && (
+                <div className="mt-4 animate-in fade-in zoom-in duration-300">
+                  <p className="text-[13px] text-red-400 font-medium text-center bg-red-950/50 py-3 px-4 rounded-xl border border-red-900/50 w-full shadow-inner">
+                    Bill Pay is currently restricted on your account.
+                  </p>
+                </div>
+              )}
             </div>
 
+</div>
+        </div>
+      )}
+
+      {/* --- CHASE-STYLE MODAL OVERLAY --- */}
+      {!canPayBills && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-[#f2f4f7] w-full max-w-[320px] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center space-y-4">
+              <h2 className="text-[20px] font-bold text-black leading-tight">We locked your account due to unusual activity</h2>
+              <p className="text-[15px] font-medium text-black leading-snug">Call us to unlock it. If you're a commercial client, reach out to your servicing team.</p>
+              <p className="text-[14px] font-medium text-black leading-snug">Please note that you will not be able to access your account information, documents or statements online or on the mobile app until we unlock your account.</p>
+            </div>
+            <div className="flex border-t border-gray-300 h-[52px]">
+              <a href="tel:18009359935" className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] border-r border-gray-300 active:bg-gray-300">Call us</a>
+              <button onClick={() => router.back()} className="flex-1 flex items-center justify-center text-[#0b5cba] font-semibold text-[17px] active:bg-gray-300">Close</button>
+            </div>
           </div>
         </div>
       )}

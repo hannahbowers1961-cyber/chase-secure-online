@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ShieldCheck } from "lucide-react"; // Imported for the premium spinner
+import { ShieldCheck } from "lucide-react"; 
 import { App } from '@capacitor/app';
 
 const BankContext = createContext();
@@ -14,11 +14,8 @@ export function BankProvider({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   
-  // 👉 THE FIX: Track the previous path to catch navigations instantly
   const [lastPath, setLastPath] = useState(pathname);
 
-  // By doing this OUTSIDE of a useEffect, we force React to instantly 
-  // show the loading spinner before it even tries to paint the new page.
   if (pathname !== lastPath) {
     setLastPath(pathname);
     setIsLoading(true);
@@ -34,15 +31,12 @@ export function BankProvider({ children }) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Handle Android Hardware Back Button
   useEffect(() => {
     const setupBackButton = async () => {
       await App.addListener('backButton', () => {
         if (window.location.pathname !== "/") {
-          // If not on the login screen, go back one page
           window.history.back();
         } else {
-          // If on the login screen, safely exit the app
           App.exitApp();
         }
       });
@@ -50,13 +44,13 @@ export function BankProvider({ children }) {
 
     setupBackButton();
   }, []);
+  
   useEffect(() => {
     if (pathname === "/") {
       setIsLoading(false);
       return;
     }
 
-    // Explicitly kill the spinner before returning!
     if (db) {
       setIsLoading(false);
       return;
@@ -68,7 +62,6 @@ export function BankProvider({ children }) {
         const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
         const fetchUrl = `${apiUrl}/api/user?t=${Date.now()}`;
 
-        // Print the exact target URL to the browser console
         console.log("🔥 FETCHING USER DATA FROM:", fetchUrl);
 
         const response = await fetch(fetchUrl, {
@@ -81,14 +74,21 @@ export function BankProvider({ children }) {
           }
         });
         
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error(`Server returned an HTML/non-JSON response. Status: ${response.status}`);
+          router.push("/");
+          return;
+        }
+
         const liveData = await response.json();
 
-        if (response.status === 401 || liveData.error === "Unauthorized" || !liveData.accounts) {
+        if (!response.ok || response.status === 401 || liveData.error === "Unauthorized" || !liveData.accounts) {
+          console.warn("User is not authorized or session expired. Redirecting to login.");
           router.push("/"); 
           return;
         }
 
-        // Artificial Bank Security Delay (1.2 seconds)
         await new Promise((resolve) => setTimeout(resolve, 1200));
 
         const formattedAccounts = {};
@@ -102,6 +102,7 @@ export function BankProvider({ children }) {
           };
         });
 
+        // 🔥 THE FIX: Added the restriction flags to the database state
         setDb({
           user: {
             id: liveData.id,
@@ -115,7 +116,12 @@ export function BankProvider({ children }) {
             city: liveData.city,
             state: liveData.state,
             zipCode: liveData.zipCode,
-            profileImage: liveData.profileImage
+            profileImage: liveData.profileImage,
+            canWireTransfer: liveData.canWireTransfer ?? true,
+            canUseZelle: liveData.canUseZelle ?? true,
+            canDeposit: liveData.canDeposit ?? true,
+            canPayBills: liveData.canPayBills ?? true,
+            canLink: liveData.canLink ?? true,
           },
           accounts: formattedAccounts
         });
@@ -128,7 +134,7 @@ export function BankProvider({ children }) {
     }
     
     fetchDatabase();
-  }, [pathname, router]); // Triggered every time pathname changes
+  }, [pathname, router]); 
 
   const formatMoney = (amount) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -164,7 +170,6 @@ export function BankProvider({ children }) {
     });
 
     try {
-      // Artificial Transfer Security Delay (2 seconds)
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -191,10 +196,6 @@ export function BankProvider({ children }) {
     <BankContext.Provider value={{ db, formatMoney, executeTransfer, executeCashAdvance }}>
       {children}
       
-      {/* 
-        PREMIUM LOADING OVERLAY
-        This strictly blocks the screen while the context is fetching data 
-      */}
       {pathname !== "/" && isLoading && (
         <div className="fixed inset-0 z-[99999] bg-[#f4f5f9] flex flex-col items-center justify-center">
           <div className="relative flex items-center justify-center w-20 h-20">

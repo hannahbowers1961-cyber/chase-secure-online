@@ -48,12 +48,14 @@ export async function POST(req) {
     });
 
     const cookieStore = await cookies();
+    const isProd = process.env.NODE_ENV === "production";
     
-    // Set standard session cookie (Changed sameSite to "none" for cross-origin)
+    // Set standard session cookie
     cookieStore.set("session_token", user.id, {
       httpOnly: true, 
-      secure: process.env.NODE_ENV === "production", 
-      sameSite: "none", 
+      secure: isProd, 
+      sameSite: isProd ? "none" : "lax", 
+      path: "/",
       maxAge: 60 * 60 * 24 * 7 
     });
 
@@ -61,8 +63,9 @@ export async function POST(req) {
     if (rememberMe) {
       cookieStore.set("trusted_device", user.id, {
         httpOnly: true, 
-        secure: process.env.NODE_ENV === "production", 
-        sameSite: "none", 
+        secure: isProd, 
+        sameSite: isProd ? "none" : "lax", 
+        path: "/",
         maxAge: 60 * 60 * 24 * 30 
       });
     }

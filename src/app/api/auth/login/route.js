@@ -54,10 +54,13 @@ export async function POST(req) {
     const trustedDevice = cookieStore.get("trusted_device")?.value;
 
     if (trustedDevice === user.id) {
+      const isProd = process.env.NODE_ENV === "production";
+      
       cookieStore.set("session_token", user.id, {
         httpOnly: true, 
-        secure: process.env.NODE_ENV === "production", 
-        sameSite: "none",
+        secure: isProd, 
+        sameSite: isProd ? "none" : "lax", // Dynamic adjustment for local vs production
+        path: "/", // Explicitly allow across the whole app
         maxAge: 60 * 60 * 24 * 7 
       });
       return NextResponse.json({ success: true, requiresOtp: false }, { headers: corsHeaders });
